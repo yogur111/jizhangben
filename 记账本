@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>小分队分账 💸</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmZrMO9O86PXYLNNC7D7GacIhgtXSoQf8",
+      authDomain: "jianfei-2744b.firebaseapp.com",
+      databaseURL: "https://jianfei-2744b-default-rtdb.firebaseio.com",
+      projectId: "jianfei-2744b",
+      storageBucket: "jianfei-2744b.firebasestorage.app",
+      messagingSenderId: "479159555380",
+      appId: "1:479159555380:web:c67068732511fd804e0161",
+      measurementId: "G-D84GYDJ9GD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    window._fb = { db, ref, set, onValue, get, ready: true };
+    document.dispatchEvent(new Event("firebase-ready"));
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { display: none; }
+
+    :root {
+      --bg: #0C0C10;
+      --surface: #141418;
+      --surface2: #1C1C22;
+      --border: rgba(255,255,255,0.08);
+      --accent: #C8F060;
+      --accent2: #60C8F0;
+      --accent3: #F060A8;
+      --text: #F0F0F0;
+      --muted: #666;
+      --dan: #FF6B6B;
+      --li: #4ECDC4;
+      --ruan: #FFE66D;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+      overscroll-behavior: none;
+    }
+
+    #app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* ── NOISE TEXTURE ── */
+    #app::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    /* ── SYNC BAR ── */
+    .sync-bar {
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+      max-width: 430px; width: 100%; z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 7px 16px; font-size: 12px; font-weight: 600;
+      transition: all 0.3s; font-family: 'Noto Sans SC', sans-serif;
+      letter-spacing: 0.03em;
+    }
+    .sync-bar.loading { background: #1a1a22; color: #555; }
+    .sync-bar.saving  { background: #2a2400; color: #FFE66D; border-bottom: 1px solid #FFE66D44; }
+    .sync-bar.saved   { background: #0a2214; color: var(--accent); border-bottom: 1px solid var(--accent)44; }
+    .sync-bar.synced  { background: #0a1a2a; color: var(--accent2); border-bottom: 1px solid var(--accent2)44; }
+    .sync-bar.error   { background: #2a0a0a; color: #FF6B6B; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 56px 24px 0;
+      position: relative; z-index: 1;
+    }
+    .header-eyebrow {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 11px; letter-spacing: 0.15em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .header-title {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 28px; font-weight: 800; line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .header-title span { color: var(--accent); }
+
+    /* ── BALANCE STRIP ── */
+    .balance-strip {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px; margin: 20px 24px 0;
+      position: relative; z-index: 1;
+    }
+    .balance-card {
+      border-radius: 16px; padding: 14px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      position: relative; overflow: hidden;
+      transition: transform 0.15s;
+    }
+    .balance-card::before {
+      content: '';
+      position: absolute; top: -30px; right: -20px;
+      width: 80px; height: 80px; border-radius: 50%;
+      opacity: 0.12;
+    }
+    .balance-card.dan::before { background: var(--dan); }
+    .balance-card.li::before  { background: var(--li); }
+    .balance-card.ruan::before{ background: var(--ruan); }
+    .balance-avatar { font-size: 22px; }
+    .balance-name { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+    .balance-amt {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 18px; font-weight: 800; margin-top: 6px; line-height: 1;
+    }
+    .balance-amt.positive { color: var(--accent); }
+    .balance-amt.negative { color: #FF6B6B; }
+    .balance-amt.zero     { color: var(--muted); }
+    .balance-label { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+    /* ── NAV ── */
+    .nav {
+      display: flex; gap: 4px;
+      margin: 20px 24px 0;
+      background: var(--surface);
+      border-radius: 14px; padding: 4px;
+      position: relative; z-index: 1;
+      border: 1px solid var(--border);
+    }
+    .nav-btn {
+      flex: 1; background: transparent; border: none;
+      border-radius: 10px; padding: 9px 4px;
+      cursor: pointer; color: var(--muted);
+      font-size: 11px; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      transition: all 0.2s; font-family: 'Noto Sans SC', sans-serif;
+    }
+    .nav-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .nav-icon { font-size: 15px; }
+
+    /* ── CONTENT ── */
+    .content { padding: 16px 24px 100px; position: relative; z-index: 1; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+      color: var(--muted); text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ── ADD BILL FORM ── */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 20px;
+      margin-bottom: 20px;
+    }
+    .form-title {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 16px; font-weight: 800;
+      margin-bottom: 16px; letter-spacing: -0.02em;
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.05em; }
+    .form-input {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 14px; color: var(--text); font-size: 15px;
+      font-family: 'Noto Sans SC', sans-serif; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input.amount-input {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 22px; font-weight: 700;
+    }
+
+    /* Category pills */
+    .cat-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cat-pill {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px;
+      font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--muted); transition: all 0.15s;
+    }
+    .cat-pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+    /* Payer select */
+    .payer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .payer-btn {
+      border-radius: 12px; padding: 10px 8px; text-align: center;
+      cursor: pointer; border: 1.5px solid var(--border);
+      background: var(--surface2); transition: all 0.15s;
+    }
+    .payer-btn.active { border-color: var(--accent); background: rgba(200,240,96,0.1); }
+    .payer-btn-avatar { font-size: 20px; }
+    .payer-btn-name { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .payer-btn.active .payer-btn-name { color: var(--accent); }
+
+    /* Split mode */
+    .split-toggle {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .split-btn {
+      border-radius: 10px; padding: 9px; text-align: center;
+      cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface2); font-size: 12px; font-weight: 600;
+      color: var(--muted); transition: all 0.15s;
+    }
+    .split-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(96,200,240,0.08); }
+
+    /* Participant checkboxes */
+    .participant-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .participant-row:last-child { border-bottom: none; }
+    .participant-left { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+    .participant-check {
+      width: 22px; height: 22px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; transition: all 0.15s; font-size: 13px;
+    }
+    .participant-check.checked { background: var(--accent); border-color: var(--accent); color: #000; }
+    .participant-custom-amt {
+      width: 80px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 10px; color: var(--text);
+      font-size: 14px; font-family: 'Noto Sans SC', sans-serif; font-weight: 600;
+      outline: none; text-align: right;
+    }
+    .participant-custom-amt:focus { border-color: var(--accent2); }
+    .participant-share { font-family: 'Noto Sans SC', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); }
+
+    /* Submit btn */
+    .submit-btn {
+      width: 100%; padding: 14px; border-radius: 14px;
+      background: var(--accent); color: #000; border: none;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+      font-family: 'Noto Sans SC', sans-serif; letter-spacing: 0.02em;
+      transition: all 0.15s; margin-top: 4px;
+    }
+    .submit-btn:active { transform: scale(0.98); }
+    .submit-btn:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; }
+
+    /* ── BILL LIST ── */
+    .bill-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px;
+      animation: slideIn 0.25s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .bill-cat-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .bill-info { flex: 1; min-width: 0; }
+    .bill-desc { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bill-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .bill-right { text-align: right; flex-shrink: 0; }
+    .bill-amt {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 16px; font-weight: 800;
+    }
+    .bill-payer { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .bill-delete {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .bill-delete:active { background: rgba(255,80,80,0.2); border-color: #FF6B6B; color: #FF6B6B; }
+
+    /* ── SETTLE UP ── */
+    .settle-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px;
+      margin-bottom: 10px;
+    }
+    .settle-arrow {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; font-weight: 600;
+    }
+    .settle-name { padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+    .settle-amt {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 20px; font-weight: 800; color: var(--accent);
+      margin: 8px 0 4px; letter-spacing: -0.02em;
+    }
+    .settle-btn {
+      padding: 8px 16px; border-radius: 10px;
+      background: rgba(200,240,96,0.12); border: 1px solid rgba(200,240,96,0.3);
+      color: var(--accent); font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: 'Noto Sans SC', sans-serif;
+      transition: all 0.15s; margin-top: 8px;
+    }
+    .settle-btn:active { background: rgba(200,240,96,0.25); }
+    .settled-log {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      font-size: 13px; color: var(--muted);
+    }
+    .settled-log:last-child { border-bottom: none; }
+
+    /* ── STATS ── */
+    .stat-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px 18px;
+      margin-bottom: 10px;
+    }
+    .stat-member-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    .stat-bar-row { margin-bottom: 8px; }
+    .stat-bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--muted); }
+    .stat-bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--accent);
+      color: var(--accent); border-radius: 12px; padding: 10px 20px;
+      font-size: 13px; font-weight: 700; z-index: 2000;
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
+      white-space: nowrap;
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+    @keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center; padding: 40px 20px; color: var(--muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-sheet {
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      border: 1px solid var(--border);
+      padding: 24px 24px 40px;
+      width: 100%; max-width: 430px;
+      animation: sheetUp 0.35s cubic-bezier(0.34,1.2,0.64,1);
+      max-height: 90vh; overflow-y: auto;
+    }
+    @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle {
+      width: 40px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 0 auto 20px;
+    }
+
+    /* Loading */
+    .loading-screen {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 80vh; gap: 16px;
+    }
+    .loading-icon { font-size: 52px; animation: pulse 1.5s ease infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ===== MEMBERS =====
+const MEMBERS = [
+  { id: "dan",  name: "蛋总", avatar: "🥚", color: "var(--dan)"  },
+  { id: "li",   name: "丽总", avatar: "🦦", color: "var(--li)"   },
+  { id: "ruan", name: "小阮", avatar: "🌼", color: "var(--ruan)" },
+];
+
+const CATS = [
+  { id: "food",  label: "🍜 吃饭", bg: "rgba(255,107,107,0.15)" },
+  { id: "drink", label: "🧋 奶茶", bg: "rgba(255,230,109,0.15)" },
+  { id: "car",   label: "🚗 打车", bg: "rgba(78,205,196,0.15)"  },
+  { id: "shop",  label: "🛍️ 购物", bg: "rgba(167,139,250,0.15)" },
+  { id: "other", label: "📦 其他", bg: "rgba(200,200,200,0.1)"  },
+];
+
+const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
+
+const DB_PATH = "squad_aa_v1";
+let _isSaving = false;
+
+// ===== STATE =====
+function defaultState() {
+  return { bills: [], settled: [] };
+}
+
+let state = defaultState();
+let ui = {
+  tab: "add",           // add | bills | settle | stats
+  syncStatus: "loading",
+  toast: null,
+  // form
+  form: {
+    desc: "",
+    amount: "",
+    cat: "food",
+    payer: "dan",
+    splitMode: "equal", // equal | custom
+    participants: { dan: true, li: true, ruan: true },
+    customAmts: { dan: "", li: "", ruan: "" },
+  },
+};
+
+// ===== FIREBASE =====
+function saveState(s) {
+  try {
+    localStorage.setItem("squad_aa", JSON.stringify(s));
+  } catch {}
+  if (window._fb?.ready) {
+    _isSaving = true;
+    ui.syncStatus = "saving";
+    render();
+    window._fb.set(window._fb.ref(window._fb.db, DB_PATH), {
+      ...s, _updatedAt: Date.now()
+    }).then(() => {
+      _isSaving = false;
+      ui.syncStatus = "saved";
+      render();
+      setTimeout(() => { if (ui.syncStatus === "saved") { ui.syncStatus = "idle"; render(); } }, 2500);
+    }).catch(() => {
+      _isSaving = false;
+      ui.syncStatus = "error";
+      render();
+    });
+  }
+}
+
+function startRealtimeSync() {
+  if (!window._fb?.ready) return;
+  window._fb.onValue(window._fb.ref(window._fb.db, DB_PATH), (snap) => {
+    if (_isSaving) return;
+    if (snap.exists()) {
+      const d = snap.val();
+      state.bills = d.bills || [];
+      state.settled = d.settled || [];
+      ui.syncStatus = "synced";
+      render();
+      setTimeout(() => { if (ui.syncStatus === "synced") { ui.syncStatus = "idle"; render(); } }, 2000);
+    }
+  });
+}
+
+async function loadFromFirebase() {
+  if (window._fb?.ready) {
+    try {
+      const snap = await window._fb.get(window._fb.ref(window._fb.db, DB_PATH));
+      if (snap.exists()) {
+        const d = snap.val();
+        return { bills: d.bills || [], settled: d.settled || [] };
+      }
+    } catch {}
+  }
+  try {
+    return JSON.parse(localStorage.getItem("squad_aa") || "null") || defaultState();
+  } catch { return defaultState(); }
+}
+
+// ===== HELPERS =====
+function getToday() { return new Date().toLocaleDateString("zh-CN", { month:"numeric", day:"numeric" }); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function fmt(n) { return "¥" + Number(n).toFixed(2); }
+
+// Compute net balances
+function computeBalances() {
+  const bal = { dan: 0, li: 0, ruan: 0 };
+  state.bills.forEach(b => {
+    // payer gets credited
+    bal[b.payer] += b.amount;
+    // each participant owes their share
+    Object.entries(b.splits).forEach(([id, amt]) => {
+      bal[id] -= amt;
+    });
+  });
+  // apply settlements
+  state.settled.forEach(s => {
+    bal[s.from] += s.amount;
+    bal[s.to]   -= s.amount;
+  });
+  return bal;
+}
+
+// Compute minimum transactions to settle
+function computeSettlements(bal) {
+  const debtors  = Object.entries(bal).filter(([,v]) => v < -0.01).map(([k,v]) => ({ id:k, amt:-v }));
+  const creditors= Object.entries(bal).filter(([,v]) => v >  0.01).map(([k,v]) => ({ id:k, amt:v }));
+  const txns = [];
+  let i = 0, j = 0;
+  while (i < debtors.length && j < creditors.length) {
+    const pay = Math.min(debtors[i].amt, creditors[j].amt);
+    txns.push({ from: debtors[i].id, to: creditors[j].id, amount: Math.round(pay * 100) / 100 });
+    debtors[i].amt  -= pay;
+    creditors[j].amt -= pay;
+    if (debtors[i].amt  < 0.01) i++;
+    if (creditors[j].amt < 0.01) j++;
+  }
+  return txns;
+}
+
+function memberById(id) { return MEMBERS.find(m => m.id === id); }
+
+// ===== FORM LOGIC =====
+function formSplits() {
+  const f = ui.form;
+  const amt = parseFloat(f.amount) || 0;
+  const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
+  if (!participants.length) return {};
+  if (f.splitMode === "equal") {
+    const share = Math.round(amt / participants.length * 100) / 100;
+    const splits = {};
+    let total = 0;
+    participants.forEach((id, i) => {
+      if (i === participants.length - 1) {
+        splits[id] = Math.round((amt - total) * 100) / 100;
+      } else {
+        splits[id] = share; total += share;
+      }
+    });
+    return splits;
+  } else {
+    const splits = {};
+    participants.forEach(id => {
+      splits[id] = parseFloat(f.customAmts[id]) || 0;
+    });
+    return splits;
+  }
+}
+
+function formValid() {
+  const f = ui.form;
+  const amt = parseFloat(f.amount);
+  if (!f.desc.trim() || !amt || amt <= 0) return false;
+  const participants = Object.values(f.participants).filter(Boolean).length;
+  if (!participants) return false;
+  if (f.splitMode === "custom") {
+    const splits = formSplits();
+    const total = Object.values(splits).reduce((s,v) => s+v, 0);
+    if (Math.abs(total - amt) > 0.01) return false;
+  }
+  return true;
+}
+
+// ===== ACTIONS =====
+function addBill() {
+  if (!formValid()) return;
+  const f = ui.form;
+  const splits = formSplits();
+  const bill = {
+    id: genId(),
+    desc: f.desc.trim(),
+    amount: parseFloat(f.amount),
+    cat: f.cat,
+    payer: f.payer,
+    splits,
+    date: getToday(),
+    ts: Date.now(),
+  };
+  state.bills.push(bill);
+  saveState(state);
+  // reset form
+  ui.form = { ...ui.form, desc: "", amount: "" };
+  showToast("✅ 记账成功！");
+  setTimeout(() => { ui.tab = "bills"; render(); }, 300);
+}
+
+function deleteBill(id) {
+  state.bills = state.bills.filter(b => b.id !== id);
+  saveState(state);
+  showToast("🗑️ 已删除");
+}
+
+function settleUp(from, to, amount) {
+  state.settled.push({ id: genId(), from, to, amount, date: getToday(), ts: Date.now() });
+  saveState(state);
+  showToast(`💸 ${memberById(from).name} → ${memberById(to).name} ¥${amount.toFixed(2)}`);
+}
+
+function showToast(msg) {
+  ui.toast = msg;
+  render();
+  setTimeout(() => { ui.toast = null; render(); }, 2200);
+}
+
+// ===== RENDER =====
+function render() {
+  document.getElementById("app").innerHTML = buildApp();
+}
+
+function buildApp() {
+  let h = "";
+
+  // SYNC BAR
+  const syncLabels = {
+    loading: `<span class="spin">⟳</span> 加载中…`,
+    saving:  `<span class="spin">⟳</span> 同步中…`,
+    saved:   `✓ 已同步`,
+    synced:  `↓ 数据已更新`,
+    error:   `⚠ 同步失败`,
+    idle:    "",
+  };
+  if (ui.syncStatus !== "idle") {
+    h += `<div class="sync-bar ${ui.syncStatus}">${syncLabels[ui.syncStatus]}</div>`;
+  }
+
+  // TOAST
+  if (ui.toast) {
+    h += `<div class="toast">${ui.toast}</div>`;
+  }
+
+  // LOADING SCREEN
+  if (ui.syncStatus === "loading") {
+    h += `<div class="loading-screen">
+      <div class="loading-icon">💸</div>
+      <div style="font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:800">小分队分账</div>
+      <div style="font-size:13px;color:var(--muted)">正在加载数据…</div>
+    </div>`;
+    return h;
+  }
+
+  // HEADER
+  const bal = computeBalances();
+  h += `<div class="header">
+    <div class="header-eyebrow">Squad AA · 小分队</div>
+    <div class="header-title">分<span>账</span>本</div>
+  </div>`;
+
+  // BALANCE STRIP
+  h += `<div class="balance-strip">`;
+  MEMBERS.forEach(m => {
+    const b = bal[m.id];
+    const cls = b > 0.01 ? "positive" : b < -0.01 ? "negative" : "zero";
+    const label = b > 0.01 ? "待收" : b < -0.01 ? "待付" : "已结清";
+    h += `<div class="balance-card ${m.id}">
+      <div class="balance-avatar">${m.avatar}</div>
+      <div class="balance-name">${m.name}</div>
+      <div class="balance-amt ${cls}">${b >= 0 ? "+" : ""}${b.toFixed(0)}</div>
+      <div class="balance-label">${label}</div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  // NAV
+  const tabs = [
+    { key:"add",    icon:"✚", label:"记账" },
+    { key:"bills",  icon:"📋", label:"账单" },
+    { key:"settle", icon:"💸", label:"结算" },
+    { key:"stats",  icon:"📊", label:"统计" },
+  ];
+  h += `<div class="nav">`;
+  tabs.forEach(t => {
+    h += `<button class="nav-btn${ui.tab===t.key?" active":""}" onclick="ui.tab='${t.key}';render()">
+      <span class="nav-icon">${t.icon}</span>${t.label}
+    </button>`;
+  });
+  h += `</div>`;
+
+  h += `<div class="content">`;
+
+  // ══ TAB: ADD ══
+  if (ui.tab === "add") {
+    const f = ui.form;
+    const amt = parseFloat(f.amount) || 0;
+    const splits = formSplits();
+    const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
+    const splitTotal = Object.values(splits).reduce((s,v)=>s+v,0);
+    const splitOk = f.splitMode === "equal" || Math.abs(splitTotal - amt) < 0.01;
+
+    h += `<div class="add-form">
+      <div class="form-title">+ 新增账单</div>
+
+      <div class="form-row">
+        <div class="form-label">金额</div>
+        <input class="form-input amount-input" type="number" inputmode="decimal"
+          placeholder="0.00" value="${f.amount}"
+          oninput="ui.form.amount=this.value;render()">
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">描述</div>
+        <input class="form-input" type="text" placeholder="比如：晚饭、奶茶、打车…"
+          value="${f.desc}"
+          oninput="ui.form.desc=this.value">
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">分类</div>
+        <div class="cat-pills">`;
+    CATS.forEach(c => {
+      h += `<div class="cat-pill${f.cat===c.id?" active":""}" onclick="ui.form.cat='${c.id}';render()">${c.label}</div>`;
+    });
+    h += `</div></div>
+
+      <div class="form-row">
+        <div class="form-label">谁付了钱</div>
+        <div class="payer-grid">`;
+    MEMBERS.forEach(m => {
+      h += `<div class="payer-btn${f.payer===m.id?" active":""}" onclick="ui.form.payer='${m.id}';render()">
+        <div class="payer-btn-avatar">${m.avatar}</div>
+        <div class="payer-btn-name">${m.name}</div>
+      </div>`;
+    });
+    h += `</div></div>
+
+      <div class="form-row">
+        <div class="form-label">分摊方式</div>
+        <div class="split-toggle">
+          <div class="split-btn${f.splitMode==="equal"?" active":""}" onclick="ui.form.splitMode='equal';render()">⚖️ 平均分</div>
+          <div class="split-btn${f.splitMode==="custom"?" active":""}" onclick="ui.form.splitMode='custom';render()">✏️ 自定义</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">参与人 & 分摊</div>`;
+
+    MEMBERS.forEach(m => {
+      const checked = f.participants[m.id];
+      const share = splits[m.id] || 0;
+      h += `<div class="participant-row">
+        <div class="participant-left">
+          <div class="participant-check${checked?" checked":""}" onclick="ui.form.participants['${m.id}']=!ui.form.participants['${m.id}'];render()">
+            ${checked?"✓":""}
+          </div>
+          <span style="font-size:18px">${m.avatar}</span>
+          <span>${m.name}</span>
+        </div>`;
+      if (f.splitMode === "custom" && checked) {
+        h += `<input class="participant-custom-amt" type="number" inputmode="decimal"
+          placeholder="0.00" value="${f.customAmts[m.id]}"
+          oninput="ui.form.customAmts['${m.id}']=this.value;render()">`;
+      } else if (f.splitMode === "equal" && checked) {
+        h += `<div class="participant-share">${fmt(share)}</div>`;
+      } else {
+        h += `<div style="color:var(--muted);font-size:12px">不参与</div>`;
+      }
+      h += `</div>`;
+    });
+
+    if (f.splitMode === "custom" && amt > 0) {
+      const diff = Math.abs(splitTotal - amt);
+      const color = diff < 0.01 ? "var(--accent)" : "#FF6B6B";
+      h += `<div style="text-align:right;font-size:12px;color:${color};margin-top:8px;font-family:'Noto Sans SC',sans-serif;font-weight:700">
+        已分：${fmt(splitTotal)} / ${fmt(amt)} ${diff<0.01?"✓":`(差 ${fmt(diff)})`}
+      </div>`;
+    }
+    h += `</div>
+
+      <button class="submit-btn" ${formValid()?"":"disabled"} onclick="addBill()">
+        记一笔 ${amt > 0 ? fmt(amt) : ""}
+      </button>
+    </div>`;
+  }
+
+  // ══ TAB: BILLS ══
+  if (ui.tab === "bills") {
+    const bills = [...state.bills].sort((a,b) => b.ts - a.ts);
+    if (!bills.length) {
+      h += `<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">还没有账单，去记第一笔吧~</div></div>`;
+    } else {
+      h += `<div class="section-title">共 ${bills.length} 笔 · 合计 ${fmt(bills.reduce((s,b)=>s+b.amount,0))}</div>`;
+      bills.forEach(b => {
+        const cat = CAT_MAP[b.cat] || CAT_MAP.other;
+        const payer = memberById(b.payer);
+        const splitDesc = Object.entries(b.splits).map(([id,amt]) => `${memberById(id)?.avatar}${fmt(amt)}`).join(" ");
+        h += `<div class="bill-item">
+          <div class="bill-cat-icon" style="background:${cat.bg}">${cat.label.split(" ")[0]}</div>
+          <div class="bill-info">
+            <div class="bill-desc">${b.desc}</div>
+            <div class="bill-meta">${b.date} · ${splitDesc}</div>
+          </div>
+          <div class="bill-right">
+            <div class="bill-amt">${fmt(b.amount)}</div>
+            <div class="bill-payer">${payer?.avatar} 付款</div>
+          </div>
+          <button class="bill-delete" onclick="deleteBill('${b.id}')">×</button>
+        </div>`;
+      });
+    }
+  }
+
+  // ══ TAB: SETTLE ══
+  if (ui.tab === "settle") {
+    const bal = computeBalances();
+    const txns = computeSettlements({ ...bal });
+    const allClear = txns.length === 0;
+
+    if (allClear) {
+      h += `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">大家都结清了！太棒了~</div></div>`;
+    } else {
+      h += `<div class="section-title">最优结算方案</div>`;
+      txns.forEach(t => {
+        const from = memberById(t.from);
+        const to   = memberById(t.to);
+        h += `<div class="settle-card">
+          <div class="settle-arrow">
+            <span style="font-size:22px">${from.avatar}</span>
+            <span class="settle-name" style="background:rgba(255,107,107,0.15);color:var(--dan)">${from.name}</span>
+            <span style="color:var(--muted);font-size:18px">→</span>
+            <span class="settle-name" style="background:rgba(200,240,96,0.12);color:var(--accent)">${to.name}</span>
+            <span style="font-size:22px">${to.avatar}</span>
+          </div>
+          <div class="settle-amt">${fmt(t.amount)}</div>
+          <button class="settle-btn" onclick="settleUp('${t.from}','${t.to}',${t.amount})">
+            ✓ 已还清
+          </button>
+        </div>`;
+      });
+    }
+
+    if (state.settled.length > 0) {
+      h += `<div class="section-title" style="margin-top:20px">结算记录</div>
+        <div class="settle-card">`;
+      [...state.settled].reverse().slice(0, 20).forEach(s => {
+        const from = memberById(s.from);
+        const to   = memberById(s.to);
+        h += `<div class="settled-log">
+          <span>${from?.avatar}</span>
+          <span style="flex:1">${from?.name} → ${to?.name}</span>
+          <span style="font-family:'Noto Sans SC',sans-serif;font-weight:700;color:var(--accent)">${fmt(s.amount)}</span>
+          <span style="margin-left:8px">${s.date}</span>
+        </div>`;
+      });
+      h += `</div>`;
+    }
+  }
+
+  // ══ TAB: STATS ══
+  if (ui.tab === "stats") {
+    const total = state.bills.reduce((s,b)=>s+b.amount,0);
+    h += `<div class="section-title">消费概览</div>`;
+
+    // Per-person total spent
+    MEMBERS.forEach(m => {
+      const paid = state.bills.filter(b=>b.payer===m.id).reduce((s,b)=>s+b.amount,0);
+      const owe  = state.bills.reduce((s,b)=>s+(b.splits[m.id]||0),0);
+      const pct  = total > 0 ? (paid/total*100).toFixed(0) : 0;
+      h += `<div class="stat-row">
+        <div class="stat-member-header">
+          <span style="font-size:28px">${m.avatar}</span>
+          <div>
+            <div style="font-weight:700;font-size:15px">${m.name}</div>
+            <div style="font-size:12px;color:var(--muted)">累计付款 ${fmt(paid)} · 应分摊 ${fmt(owe)}</div>
+          </div>
+        </div>
+        <div class="stat-bar-row">
+          <div class="stat-bar-label"><span>付款占比</span><span>${pct}%</span></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:${m.color}"></div></div>
+        </div>
+      </div>`;
+    });
+
+    // By category
+    h += `<div class="section-title" style="margin-top:8px">分类汇总</div>
+      <div class="stat-row">`;
+    CATS.forEach(c => {
+      const catTotal = state.bills.filter(b=>b.cat===c.id).reduce((s,b)=>s+b.amount,0);
+      if (!catTotal) return;
+      const pct = total > 0 ? (catTotal/total*100).toFixed(0) : 0;
+      h += `<div class="stat-bar-row">
+        <div class="stat-bar-label"><span>${c.label}</span><span>${fmt(catTotal)}</span></div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+      </div>`;
+    });
+    if (!total) h += `<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0">暂无数据</div>`;
+    h += `</div>`;
+  }
+
+  h += `</div>`;
+  return h;
+}
+
+// ===== INIT =====
+render();
+async function init() {
+  const doInit = async () => {
+    state = await loadFromFirebase();
+    startRealtimeSync();
+    ui.syncStatus = "idle";
+    render();
+  };
+  if (window._fb?.ready) {
+    await doInit();
+  } else {
+    document.addEventListener("firebase-ready", doInit, { once: true });
+  }
+}
+init();
+</script>
+</body>
+</html>
