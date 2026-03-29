@@ -584,6 +584,28 @@ function formValid() {
 }
 
 // ===== ACTIONS =====
+// Sync live input values from DOM before any action that needs them
+function syncInputsNow() {
+  const amtEl = document.getElementById("amountInput");
+  const descEl = document.getElementById("descInput");
+  if (amtEl) ui.form.amount = amtEl.value;
+  if (descEl) ui.form.desc = descEl.value;
+}
+
+function syncInputsAndAdd() {
+  syncInputsNow();
+  if (!formValid()) {
+    // Show why it failed
+    const f = ui.form;
+    const amt = parseFloat(f.amount);
+    if (!f.desc.trim()) { showToast("请填写描述"); return; }
+    if (!amt || amt <= 0) { showToast("请填写金额"); return; }
+    showToast("请检查分摊金额");
+    return;
+  }
+  addBill();
+}
+
 function addBill() {
   if (!formValid()) return;
   const f = ui.form;
@@ -626,7 +648,19 @@ function showToast(msg) {
 
 // ===== RENDER =====
 function render() {
+  // Save live input values before wiping DOM
+  const amtEl = document.getElementById("amountInput");
+  const descEl = document.getElementById("descInput");
+  if (amtEl) ui.form.amount = amtEl.value;
+  if (descEl) ui.form.desc = descEl.value;
+
   document.getElementById("app").innerHTML = buildApp();
+
+  // Restore input values after DOM rebuild
+  const newAmt = document.getElementById("amountInput");
+  const newDesc = document.getElementById("descInput");
+  if (newAmt) newAmt.value = ui.form.amount;
+  if (newDesc) newDesc.value = ui.form.desc;
 }
 
 function buildApp() {
@@ -713,16 +747,18 @@ function buildApp() {
 
       <div class="form-row">
         <div class="form-label">金额</div>
-        <input class="form-input amount-input" type="number" inputmode="decimal"
-          placeholder="0.00" value="${f.amount}"
-          oninput="ui.form.amount=this.value;render()">
+        <input class="form-input amount-input" type="text" inputmode="decimal"
+          placeholder="0.00" id="amountInput"
+          onblur="ui.form.amount=this.value;render()"
+          onkeydown="if(event.key==='Enter'){ui.form.amount=this.value;render()}">
       </div>
 
       <div class="form-row">
         <div class="form-label">描述</div>
         <input class="form-input" type="text" placeholder="比如：晚饭、奶茶、打车…"
-          value="${f.desc}"
-          oninput="ui.form.desc=this.value">
+          id="descInput"
+          onblur="ui.form.desc=this.value"
+          onkeydown="if(event.key==='Enter'){ui.form.desc=this.value;render()}">
       </div>
 
       <div class="form-row">
@@ -787,8 +823,8 @@ function buildApp() {
     }
     h += `</div>
 
-      <button class="submit-btn" ${formValid()?"":"disabled"} onclick="addBill()">
-        记一笔 ${amt > 0 ? fmt(amt) : ""}
+      <button class="submit-btn" onclick="syncInputsAndAdd()">
+        记一笔
       </button>
     </div>`;
   }
