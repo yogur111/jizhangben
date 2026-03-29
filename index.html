@@ -6,7 +6,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>小分队分账 💸</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'Noto Sans SC';
+      src: local('PingFang SC'), local('Microsoft YaHei'), local('Helvetica Neue');
+    }
+  </style>
 
   <!-- Firebase SDK -->
   <script type="module">
@@ -35,6 +40,7 @@
     ::-webkit-scrollbar { display: none; }
 
     :root {
+      --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
       --bg: #0C0C10;
       --surface: #141418;
       --surface2: #1C1C22;
@@ -50,7 +56,7 @@
     }
 
     body {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       background: var(--bg);
       min-height: 100vh;
       color: var(--text);
@@ -79,7 +85,7 @@
       max-width: 430px; width: 100%; z-index: 1000;
       display: flex; align-items: center; justify-content: center;
       gap: 6px; padding: 7px 16px; font-size: 12px; font-weight: 600;
-      transition: all 0.3s; font-family: 'Noto Sans SC', sans-serif;
+      transition: all 0.3s; font-family: var(--font);
       letter-spacing: 0.03em;
     }
     .sync-bar.loading { background: #1a1a22; color: #555; }
@@ -96,12 +102,12 @@
       position: relative; z-index: 1;
     }
     .header-eyebrow {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 11px; letter-spacing: 0.15em; color: var(--muted);
       text-transform: uppercase; margin-bottom: 6px;
     }
     .header-title {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 28px; font-weight: 800; line-height: 1;
       letter-spacing: -0.03em;
     }
@@ -132,7 +138,7 @@
     .balance-avatar { font-size: 22px; }
     .balance-name { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; }
     .balance-amt {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 18px; font-weight: 800; margin-top: 6px; line-height: 1;
     }
     .balance-amt.positive { color: var(--accent); }
@@ -155,7 +161,7 @@
       cursor: pointer; color: var(--muted);
       font-size: 11px; font-weight: 600;
       display: flex; flex-direction: column; align-items: center; gap: 2px;
-      transition: all 0.2s; font-family: 'Noto Sans SC', sans-serif;
+      transition: all 0.2s; font-family: var(--font);
     }
     .nav-btn.active {
       background: var(--surface2);
@@ -168,7 +174,7 @@
 
     /* ── SECTION TITLE ── */
     .section-title {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
       color: var(--muted); text-transform: uppercase;
       margin-bottom: 12px;
@@ -182,7 +188,7 @@
       margin-bottom: 20px;
     }
     .form-title {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 16px; font-weight: 800;
       margin-bottom: 16px; letter-spacing: -0.02em;
     }
@@ -192,12 +198,12 @@
       width: 100%; background: var(--surface2);
       border: 1px solid var(--border); border-radius: 12px;
       padding: 12px 14px; color: var(--text); font-size: 15px;
-      font-family: 'Noto Sans SC', sans-serif; outline: none;
+      font-family: var(--font); outline: none;
       transition: border-color 0.2s;
     }
     .form-input:focus { border-color: var(--accent); }
     .form-input.amount-input {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 22px; font-weight: 700;
     }
 
@@ -251,18 +257,18 @@
     .participant-custom-amt {
       width: 80px; background: var(--surface2); border: 1px solid var(--border);
       border-radius: 8px; padding: 6px 10px; color: var(--text);
-      font-size: 14px; font-family: 'Noto Sans SC', sans-serif; font-weight: 600;
+      font-size: 14px; font-family: var(--font); font-weight: 600;
       outline: none; text-align: right;
     }
     .participant-custom-amt:focus { border-color: var(--accent2); }
-    .participant-share { font-family: 'Noto Sans SC', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); }
+    .participant-share { font-family: var(--font); font-size: 14px; font-weight: 700; color: var(--accent); }
 
     /* Submit btn */
     .submit-btn {
       width: 100%; padding: 14px; border-radius: 14px;
       background: var(--accent); color: #000; border: none;
       font-size: 15px; font-weight: 800; cursor: pointer;
-      font-family: 'Noto Sans SC', sans-serif; letter-spacing: 0.02em;
+      font-family: var(--font); letter-spacing: 0.02em;
       transition: all 0.15s; margin-top: 4px;
     }
     .submit-btn:active { transform: scale(0.98); }
@@ -288,7 +294,7 @@
     .bill-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .bill-right { text-align: right; flex-shrink: 0; }
     .bill-amt {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 16px; font-weight: 800;
     }
     .bill-payer { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -314,7 +320,7 @@
     }
     .settle-name { padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700; }
     .settle-amt {
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
       font-size: 20px; font-weight: 800; color: var(--accent);
       margin: 8px 0 4px; letter-spacing: -0.02em;
     }
@@ -322,7 +328,7 @@
       padding: 8px 16px; border-radius: 10px;
       background: rgba(200,240,96,0.12); border: 1px solid rgba(200,240,96,0.3);
       color: var(--accent); font-size: 12px; font-weight: 700;
-      cursor: pointer; font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer; font-family: var(--font);
       transition: all 0.15s; margin-top: 8px;
     }
     .settle-btn:active { background: rgba(200,240,96,0.25); }
@@ -356,7 +362,7 @@
       font-size: 13px; font-weight: 700; z-index: 2000;
       animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
       white-space: nowrap;
-      font-family: 'Noto Sans SC', sans-serif;
+      font-family: var(--font);
     }
     @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
     @keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
@@ -487,12 +493,18 @@ function startRealtimeSync() {
 async function loadFromFirebase() {
   if (window._fb?.ready) {
     try {
-      const snap = await window._fb.get(window._fb.ref(window._fb.db, DB_PATH));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000));
+      const snap = await Promise.race([
+        window._fb.get(window._fb.ref(window._fb.db, DB_PATH)),
+        timeout
+      ]);
       if (snap.exists()) {
         const d = snap.val();
         return { bills: d.bills || [], settled: d.settled || [] };
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Firebase load failed, using local:", e.message);
+    }
   }
   try {
     return JSON.parse(localStorage.getItem("squad_aa") || "null") || defaultState();
@@ -688,7 +700,7 @@ function buildApp() {
   if (ui.syncStatus === "loading") {
     h += `<div class="loading-screen">
       <div class="loading-icon">💸</div>
-      <div style="font-family:'Noto Sans SC',sans-serif;font-size:18px;font-weight:800">小分队分账</div>
+      <div style="font-family:var(--font);font-size:18px;font-weight:800">小分队分账</div>
       <div style="font-size:13px;color:var(--muted)">正在加载数据…</div>
     </div>`;
     return h;
@@ -817,7 +829,7 @@ function buildApp() {
     if (f.splitMode === "custom" && amt > 0) {
       const diff = Math.abs(splitTotal - amt);
       const color = diff < 0.01 ? "var(--accent)" : "#FF6B6B";
-      h += `<div style="text-align:right;font-size:12px;color:${color};margin-top:8px;font-family:'Noto Sans SC',sans-serif;font-weight:700">
+      h += `<div style="text-align:right;font-size:12px;color:${color};margin-top:8px;font-family:var(--font);font-weight:700">
         已分：${fmt(splitTotal)} / ${fmt(amt)} ${diff<0.01?"✓":`(差 ${fmt(diff)})`}
       </div>`;
     }
@@ -894,7 +906,7 @@ function buildApp() {
         h += `<div class="settled-log">
           <span>${from?.avatar}</span>
           <span style="flex:1">${from?.name} → ${to?.name}</span>
-          <span style="font-family:'Noto Sans SC',sans-serif;font-weight:700;color:var(--accent)">${fmt(s.amount)}</span>
+          <span style="font-family:var(--font);font-weight:700;color:var(--accent)">${fmt(s.amount)}</span>
           <span style="margin-left:8px">${s.date}</span>
         </div>`;
       });
@@ -959,7 +971,17 @@ async function init() {
   if (window._fb?.ready) {
     await doInit();
   } else {
-    document.addEventListener("firebase-ready", doInit, { once: true });
+    // Timeout: if Firebase SDK doesn't load in 6s, fall back to localStorage
+    const timer = setTimeout(async () => {
+      console.warn("Firebase SDK load timeout, using localStorage");
+      state = JSON.parse(localStorage.getItem("squad_aa") || "null") || defaultState();
+      ui.syncStatus = "idle";
+      render();
+    }, 6000);
+    document.addEventListener("firebase-ready", async () => {
+      clearTimeout(timer);
+      await doInit();
+    }, { once: true });
   }
 }
 init();
