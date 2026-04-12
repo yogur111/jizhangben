@@ -395,6 +395,60 @@
       border-radius: 2px; margin: 0 auto 20px;
     }
 
+    /* ── CALCULATOR ── */
+    .calc-display {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 14px; color: var(--text);
+      font-family: var(--font); outline: none;
+      transition: border-color 0.2s;
+      min-height: 58px;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .calc-display.has-expr { border-color: var(--accent2); }
+    .calc-expr {
+      font-size: 13px; color: var(--accent2); font-weight: 600;
+      letter-spacing: 0.02em; min-height: 18px;
+      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    }
+    .calc-expr-chip {
+      background: rgba(96,200,240,0.12); border: 1px solid rgba(96,200,240,0.25);
+      border-radius: 6px; padding: 1px 7px; font-size: 12px;
+    }
+    .calc-result {
+      font-size: 26px; font-weight: 800; line-height: 1.1;
+      font-family: var(--font);
+    }
+    .calc-result.zero { color: var(--muted); }
+    .calc-result.has-val { color: var(--text); }
+    .calc-keypad {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-top: 10px;
+    }
+    .calc-key {
+      border-radius: 12px; padding: 14px 4px;
+      text-align: center; cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 17px; font-weight: 700;
+      color: var(--text); transition: all 0.1s;
+      user-select: none; font-family: var(--font);
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .calc-key:active { transform: scale(0.94); background: var(--surface); }
+    .calc-key.op { color: var(--accent2); background: rgba(96,200,240,0.06); }
+    .calc-key.op:active { background: rgba(96,200,240,0.18); }
+    .calc-key.del { color: #FF9999; font-size: 19px; }
+    .calc-key.confirm {
+      grid-column: span 2;
+      background: var(--accent); color: #000;
+      border-color: var(--accent); font-size: 15px;
+    }
+    .calc-key.confirm:active { background: #a8d040; }
+    .calc-key.clear { color: var(--dan); background: rgba(255,107,107,0.06); }
+    .calc-key.clear:active { background: rgba(255,107,107,0.18); }
+
     /* Loading */
     .loading-screen {
       display: flex; flex-direction: column;
@@ -448,6 +502,11 @@ let ui = {
     splitMode: "equal", // equal | custom
     participants: { dan: true, li: true, ruan: true },
     customAmts: { dan: "", li: "", ruan: "" },
+  },
+  // calculator
+  calc: {
+    items: [],    // list of numbers added so far e.g. [100, 30]
+    current: "",  // current number being typed
   },
 };
 
@@ -557,7 +616,7 @@ function memberById(id) { return MEMBERS.find(m => m.id === id); }
 // ===== FORM LOGIC =====
 function formSplits() {
   const f = ui.form;
-  const amt = parseFloat(f.amount) || 0;
+  const amt = parseFloat(f.amount) || (ui.calc.items.length > 0 || ui.calc.current ? calcTotal() : 0);
   const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
   if (!participants.length) return {};
   if (f.splitMode === "equal") {
@@ -583,7 +642,8 @@ function formSplits() {
 
 function formValid() {
   const f = ui.form;
-  const amt = parseFloat(f.amount);
+  // allow pending calc state
+  const amt = parseFloat(f.amount) || (ui.calc.items.length > 0 || ui.calc.current ? calcTotal() : 0);
   if (!f.desc.trim() || !amt || amt <= 0) return false;
   const participants = Object.values(f.participants).filter(Boolean).length;
   if (!participants) return false;
@@ -598,10 +658,13 @@ function formValid() {
 // ===== ACTIONS =====
 // Sync live input values from DOM before any action that needs them
 function syncInputsNow() {
-  const amtEl = document.getElementById("amountInput");
   const descEl = document.getElementById("descInput");
-  if (amtEl) ui.form.amount = amtEl.value;
   if (descEl) ui.form.desc = descEl.value;
+  // amount is now managed via calculator state; sync if calc has pending input
+  if (ui.calc.current !== "" || ui.calc.items.length > 0) {
+    calcKey('confirm');
+    return; // calcKey calls render internally
+  }
 }
 
 function syncInputsAndAdd() {
@@ -619,6 +682,15 @@ function syncInputsAndAdd() {
 }
 
 function addBill() {
+  // auto-confirm any pending calc
+  if (ui.calc.items.length > 0 || ui.calc.current !== "") {
+    const total = calcTotal();
+    if (total > 0) {
+      ui.form.amount = String(Math.round(total * 100) / 100);
+      ui.calc.items = [];
+      ui.calc.current = "";
+    }
+  }
   if (!formValid()) return;
   const f = ui.form;
   const splits = formSplits();
@@ -636,6 +708,7 @@ function addBill() {
   saveState(state);
   // reset form
   ui.form = { ...ui.form, desc: "", amount: "" };
+  ui.calc = { items: [], current: "" };
   showToast("✅ 记账成功！");
   setTimeout(() => { ui.tab = "bills"; render(); }, 300);
 }
@@ -658,20 +731,110 @@ function showToast(msg) {
   setTimeout(() => { ui.toast = null; render(); }, 2200);
 }
 
+// ===== CALCULATOR UI =====
+function buildCalc() {
+  const c = ui.calc;
+  const liveTotal = calcTotal();
+  const hasItems = c.items.length > 0 || c.current !== "";
+  const displayVal = ui.form.amount && !hasItems
+    ? ui.form.amount
+    : hasItems ? String(liveTotal === 0 ? "" : (Math.round(liveTotal * 100) / 100)) : "";
+
+  let exprHtml = "";
+  if (c.items.length > 0 || c.current !== "") {
+    const parts = c.items.map(v => `<span class="calc-expr-chip">¥${v}</span>`);
+    if (c.items.length > 0 && c.current !== "") parts.push(`<span style="color:var(--accent2)">+</span>`);
+    if (c.current !== "") parts.push(`<span class="calc-expr-chip" style="border-color:rgba(200,240,96,0.4);background:rgba(200,240,96,0.08);color:var(--accent)">¥${c.current}</span>`);
+    exprHtml = parts.join(" ");
+  }
+
+  const displayClass = hasItems ? "calc-display has-expr" : "calc-display";
+  const resultClass = displayVal ? "calc-result has-val" : "calc-result zero";
+  const resultText = displayVal || "0.00";
+
+  const keys = [
+    { label: "7", key: "7" }, { label: "8", key: "8" }, { label: "9", key: "9" }, { label: "+", key: "+", cls: "op" },
+    { label: "4", key: "4" }, { label: "5", key: "5" }, { label: "6", key: "6" }, { label: "⌫", key: "del", cls: "del" },
+    { label: "1", key: "1" }, { label: "2", key: "2" }, { label: "3", key: "3" }, { label: "C", key: "clear", cls: "clear" },
+    { label: "0", key: "0" }, { label: ".", key: "." },
+    { label: c.items.length > 0 ? `✓ 合计 ¥${Math.round(liveTotal*100)/100}` : "确认金额", key: "confirm", cls: "confirm" },
+  ];
+
+  let kHtml = keys.map(k =>
+    `<div class="calc-key ${k.cls||""}" onclick="calcKey('${k.key}')">${k.label}</div>`
+  ).join("");
+
+  return `<div class="${displayClass}">
+    <div class="calc-expr">${exprHtml}</div>
+    <div class="${resultClass}">¥${resultText}</div>
+  </div>
+  <div class="calc-keypad">${kHtml}</div>`;
+}
+
+// ===== CALCULATOR =====
+function calcTotal() {
+  const c = ui.calc;
+  const allNums = [...c.items, parseFloat(c.current) || 0];
+  return allNums.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+}
+
+function calcKey(key) {
+  const c = ui.calc;
+  if (key === 'del') {
+    if (c.current.length > 0) {
+      c.current = c.current.slice(0, -1);
+    } else if (c.items.length > 0) {
+      // remove last item and restore it as current
+      c.current = String(c.items.pop());
+    }
+  } else if (key === 'clear') {
+    c.items = [];
+    c.current = "";
+    ui.form.amount = "";
+  } else if (key === '+') {
+    const val = parseFloat(c.current);
+    if (!isNaN(val) && c.current !== "") {
+      c.items.push(val);
+      c.current = "";
+    }
+  } else if (key === 'confirm') {
+    // finalize: push current if any, sum everything
+    if (c.current !== "") {
+      const val = parseFloat(c.current);
+      if (!isNaN(val)) c.items.push(val);
+      c.current = "";
+    }
+    const total = c.items.reduce((s, v) => s + v, 0);
+    if (total > 0) {
+      ui.form.amount = String(Math.round(total * 100) / 100);
+      c.items = [];
+      c.current = "";
+    }
+  } else if (key === '.') {
+    if (!c.current.includes('.')) {
+      c.current = c.current === "" ? "0." : c.current + '.';
+    }
+  } else {
+    // digit
+    if (c.current === "0" && key !== '.') {
+      c.current = key;
+    } else {
+      c.current += key;
+    }
+  }
+  render();
+}
+
 // ===== RENDER =====
 function render() {
-  // Save live input values before wiping DOM
-  const amtEl = document.getElementById("amountInput");
+  // Save desc input before wiping DOM
   const descEl = document.getElementById("descInput");
-  if (amtEl) ui.form.amount = amtEl.value;
   if (descEl) ui.form.desc = descEl.value;
 
   document.getElementById("app").innerHTML = buildApp();
 
-  // Restore input values after DOM rebuild
-  const newAmt = document.getElementById("amountInput");
+  // Restore desc value after DOM rebuild
   const newDesc = document.getElementById("descInput");
-  if (newAmt) newAmt.value = ui.form.amount;
   if (newDesc) newDesc.value = ui.form.desc;
 }
 
@@ -748,7 +911,7 @@ function buildApp() {
   // ══ TAB: ADD ══
   if (ui.tab === "add") {
     const f = ui.form;
-    const amt = parseFloat(f.amount) || 0;
+    const amt = parseFloat(f.amount) || (ui.calc.items.length > 0 || ui.calc.current ? calcTotal() : 0);
     const splits = formSplits();
     const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
     const splitTotal = Object.values(splits).reduce((s,v)=>s+v,0);
@@ -758,11 +921,8 @@ function buildApp() {
       <div class="form-title">+ 新增账单</div>
 
       <div class="form-row">
-        <div class="form-label">金额</div>
-        <input class="form-input amount-input" type="text" inputmode="decimal"
-          placeholder="0.00" id="amountInput"
-          onblur="ui.form.amount=this.value;render()"
-          onkeydown="if(event.key==='Enter'){ui.form.amount=this.value;render()}">
+        <div class="form-label">金额 <span style="color:var(--accent2);font-size:10px;font-weight:500">· 可叠加多项</span></div>
+        ${buildCalc()}
       </div>
 
       <div class="form-row">
