@@ -415,6 +415,12 @@
       background: rgba(96,200,240,0.12); border: 1px solid rgba(96,200,240,0.25);
       border-radius: 6px; padding: 1px 7px; font-size: 12px;
     }
+    .calc-expr-chip.active {
+      background: rgba(200,240,96,0.1); border-color: rgba(200,240,96,0.35); color: var(--accent);
+    }
+    .calc-op-sym {
+      color: var(--accent2); font-size: 14px; font-weight: 800; padding: 0 2px;
+    }
     .calc-result {
       font-size: 26px; font-weight: 800; line-height: 1.1;
       font-family: var(--font);
@@ -441,7 +447,7 @@
     .calc-key.op:active { background: rgba(96,200,240,0.18); }
     .calc-key.del { color: #FF9999; font-size: 19px; }
     .calc-key.confirm {
-      grid-column: span 2;
+      grid-column: span 3;
       background: var(--accent); color: #000;
       border-color: var(--accent); font-size: 15px;
     }
@@ -505,7 +511,7 @@ let ui = {
   },
   // calculator
   calc: {
-    items: [],    // list of numbers added so far e.g. [100, 30]
+    tokens: [],   // list of {type:'num'|'op', val} e.g. [{type:'num',val:100},{type:'op',val:'+'},{type:'num',val:30}]
     current: "",  // current number being typed
   },
 };
@@ -616,7 +622,7 @@ function memberById(id) { return MEMBERS.find(m => m.id === id); }
 // ===== FORM LOGIC =====
 function formSplits() {
   const f = ui.form;
-  const amt = parseFloat(f.amount) || (ui.calc.items.length > 0 || ui.calc.current ? calcTotal() : 0);
+  const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
   const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
   if (!participants.length) return {};
   if (f.splitMode === "equal") {
@@ -643,7 +649,7 @@ function formSplits() {
 function formValid() {
   const f = ui.form;
   // allow pending calc state
-  const amt = parseFloat(f.amount) || (ui.calc.items.length > 0 || ui.calc.current ? calcTotal() : 0);
+  const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
   if (!f.desc.trim() || !amt || amt <= 0) return false;
   const participants = Object.values(f.participants).filter(Boolean).length;
   if (!participants) return false;
@@ -661,7 +667,7 @@ function syncInputsNow() {
   const descEl = document.getElementById("descInput");
   if (descEl) ui.form.desc = descEl.value;
   // amount is now managed via calculator state; sync if calc has pending input
-  if (ui.calc.current !== "" || ui.calc.items.length > 0) {
+  if (ui.calc.current !== "" || ui.calc.tokens.length > 0) {
     calcKey('confirm');
     return; // calcKey calls render internally
   }
@@ -683,11 +689,11 @@ function syncInputsAndAdd() {
 
 function addBill() {
   // auto-confirm any pending calc
-  if (ui.calc.items.length > 0 || ui.calc.current !== "") {
+  if (ui.calc.tokens.length > 0 || ui.calc.current !== "") {
     const total = calcTotal();
     if (total > 0) {
       ui.form.amount = String(Math.round(total * 100) / 100);
-      ui.calc.items = [];
+      ui.calc.tokens = [];
       ui.calc.current = "";
     }
   }
@@ -708,7 +714,7 @@ function addBill() {
   saveState(state);
   // reset form
   ui.form = { ...ui.form, desc: "", amount: "" };
-  ui.calc = { items: [], current: "" };
+  ui.calc = { tokens: [], current: "" };
   showToast("✅ 记账成功！");
   setTimeout(() => { ui.tab = "bills"; render(); }, 300);
 }
@@ -734,30 +740,41 @@ function showToast(msg) {
 // ===== CALCULATOR UI =====
 function buildCalc() {
   const c = ui.calc;
-  const liveTotal = calcTotal();
-  const hasItems = c.items.length > 0 || c.current !== "";
-  const displayVal = ui.form.amount && !hasItems
+  const hasActivity = c.tokens.length > 0 || c.current !== "";
+  const liveTotal = hasActivity ? calcTotal() : 0;
+  const displayVal = ui.form.amount && !hasActivity
     ? ui.form.amount
-    : hasItems ? String(liveTotal === 0 ? "" : (Math.round(liveTotal * 100) / 100)) : "";
+    : hasActivity ? String(Math.round(liveTotal * 100) / 100) : "";
 
-  let exprHtml = "";
-  if (c.items.length > 0 || c.current !== "") {
-    const parts = c.items.map(v => `<span class="calc-expr-chip">¥${v}</span>`);
-    if (c.items.length > 0 && c.current !== "") parts.push(`<span style="color:var(--accent2)">+</span>`);
-    if (c.current !== "") parts.push(`<span class="calc-expr-chip" style="border-color:rgba(200,240,96,0.4);background:rgba(200,240,96,0.08);color:var(--accent)">¥${c.current}</span>`);
-    exprHtml = parts.join(" ");
+  // Build expression string for display
+  let exprParts = [];
+  c.tokens.forEach(t => {
+    if (t.type === 'num') {
+      exprParts.push(`<span class="calc-expr-chip">${t.val}</span>`);
+    } else {
+      exprParts.push(`<span class="calc-op-sym">${t.val}</span>`);
+    }
+  });
+  if (c.current !== "") {
+    exprParts.push(`<span class="calc-expr-chip active">${c.current}</span>`);
   }
+  const exprHtml = exprParts.join("");
 
-  const displayClass = hasItems ? "calc-display has-expr" : "calc-display";
+  const displayClass = hasActivity ? "calc-display has-expr" : "calc-display";
   const resultClass = displayVal ? "calc-result has-val" : "calc-result zero";
   const resultText = displayVal || "0.00";
 
+  const hasOp = c.tokens.some(t => t.type === 'op');
+  const confirmLabel = hasOp
+    ? `= ¥${Math.round(liveTotal*100)/100}`
+    : (hasActivity ? `✓ 确认` : "确认金额");
+
   const keys = [
-    { label: "7", key: "7" }, { label: "8", key: "8" }, { label: "9", key: "9" }, { label: "+", key: "+", cls: "op" },
-    { label: "4", key: "4" }, { label: "5", key: "5" }, { label: "6", key: "6" }, { label: "⌫", key: "del", cls: "del" },
-    { label: "1", key: "1" }, { label: "2", key: "2" }, { label: "3", key: "3" }, { label: "C", key: "clear", cls: "clear" },
-    { label: "0", key: "0" }, { label: ".", key: "." },
-    { label: c.items.length > 0 ? `✓ 合计 ¥${Math.round(liveTotal*100)/100}` : "确认金额", key: "confirm", cls: "confirm" },
+    { label: "7", key: "7" }, { label: "8", key: "8" }, { label: "9", key: "9" }, { label: "÷", key: "÷", cls: "op" },
+    { label: "4", key: "4" }, { label: "5", key: "5" }, { label: "6", key: "6" }, { label: "×", key: "×", cls: "op" },
+    { label: "1", key: "1" }, { label: "2", key: "2" }, { label: "3", key: "3" }, { label: "−", key: "-", cls: "op" },
+    { label: "0", key: "0" }, { label: ".", key: "." }, { label: "⌫", key: "del", cls: "del" }, { label: "+", key: "+", cls: "op" },
+    { label: "C", key: "clear", cls: "clear" }, { label: confirmLabel, key: "confirm", cls: "confirm" },
   ];
 
   let kHtml = keys.map(k =>
@@ -765,58 +782,105 @@ function buildCalc() {
   ).join("");
 
   return `<div class="${displayClass}">
-    <div class="calc-expr">${exprHtml}</div>
+    <div class="calc-expr">${exprHtml || '<span style="color:var(--muted);font-size:12px">输入金额，支持 + − × ÷</span>'}</div>
     <div class="${resultClass}">¥${resultText}</div>
   </div>
   <div class="calc-keypad">${kHtml}</div>`;
 }
 
 // ===== CALCULATOR =====
+function calcEval(tokens) {
+  // tokens: array of {type:'num'|'op', val}
+  // Two-pass: first handle * and /, then + and -
+  if (!tokens.length) return 0;
+  // build flat array of nums and ops
+  const nums = [], ops = [];
+  tokens.forEach(t => {
+    if (t.type === 'num') nums.push(t.val);
+    else ops.push(t.val);
+  });
+  // pass 1: * and /
+  let i = 0;
+  while (i < ops.length) {
+    if (ops[i] === '×' || ops[i] === '÷') {
+      const a = nums[i], b = nums[i+1];
+      const res = ops[i] === '×' ? a * b : (b !== 0 ? a / b : 0);
+      nums.splice(i, 2, res);
+      ops.splice(i, 1);
+    } else { i++; }
+  }
+  // pass 2: + and -
+  let result = nums[0] || 0;
+  for (let j = 0; j < ops.length; j++) {
+    if (ops[j] === '+') result += nums[j+1];
+    else if (ops[j] === '-') result -= nums[j+1];
+  }
+  return Math.round(result * 10000) / 10000;
+}
+
 function calcTotal() {
   const c = ui.calc;
-  const allNums = [...c.items, parseFloat(c.current) || 0];
-  return allNums.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const tokens = [...c.tokens];
+  if (c.current !== "") tokens.push({ type: 'num', val: parseFloat(c.current) || 0 });
+  return calcEval(tokens);
 }
 
 function calcKey(key) {
   const c = ui.calc;
+  const isOp = ['+', '-', '×', '÷'].includes(key);
+
   if (key === 'del') {
     if (c.current.length > 0) {
       c.current = c.current.slice(0, -1);
-    } else if (c.items.length > 0) {
-      // remove last item and restore it as current
-      c.current = String(c.items.pop());
+    } else if (c.tokens.length > 0) {
+      const last = c.tokens[c.tokens.length - 1];
+      if (last.type === 'op') {
+        c.tokens.pop(); // remove operator, go back to editing prev number
+      } else {
+        c.tokens.pop();
+        c.current = String(last.val);
+      }
     }
   } else if (key === 'clear') {
-    c.items = [];
+    c.tokens = [];
     c.current = "";
     ui.form.amount = "";
-  } else if (key === '+') {
-    const val = parseFloat(c.current);
-    if (!isNaN(val) && c.current !== "") {
-      c.items.push(val);
+  } else if (isOp) {
+    // if we have a current number, push it first
+    if (c.current !== "") {
+      c.tokens.push({ type: 'num', val: parseFloat(c.current) || 0 });
       c.current = "";
+    }
+    // replace last op if last token is already an op
+    if (c.tokens.length > 0 && c.tokens[c.tokens.length-1].type === 'op') {
+      c.tokens[c.tokens.length-1].val = key;
+    } else if (c.tokens.length > 0) {
+      c.tokens.push({ type: 'op', val: key });
+    }
+    // if no tokens yet and op is '-', start negative number
+    else if (key === '-') {
+      c.current = '-';
     }
   } else if (key === 'confirm') {
-    // finalize: push current if any, sum everything
     if (c.current !== "") {
-      const val = parseFloat(c.current);
-      if (!isNaN(val)) c.items.push(val);
+      c.tokens.push({ type: 'num', val: parseFloat(c.current) || 0 });
       c.current = "";
     }
-    const total = c.items.reduce((s, v) => s + v, 0);
+    // remove trailing op if any
+    if (c.tokens.length > 0 && c.tokens[c.tokens.length-1].type === 'op') c.tokens.pop();
+    const total = calcEval(c.tokens);
     if (total > 0) {
       ui.form.amount = String(Math.round(total * 100) / 100);
-      c.items = [];
+      c.tokens = [];
       c.current = "";
     }
   } else if (key === '.') {
     if (!c.current.includes('.')) {
-      c.current = c.current === "" ? "0." : c.current + '.';
+      c.current = c.current === "" || c.current === "-" ? (c.current + "0.") : c.current + '.';
     }
   } else {
     // digit
-    if (c.current === "0" && key !== '.') {
+    if (c.current === "0") {
       c.current = key;
     } else {
       c.current += key;
@@ -911,7 +975,7 @@ function buildApp() {
   // ══ TAB: ADD ══
   if (ui.tab === "add") {
     const f = ui.form;
-    const amt = parseFloat(f.amount) || (ui.calc.items.length > 0 || ui.calc.current ? calcTotal() : 0);
+    const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
     const splits = formSplits();
     const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
     const splitTotal = Object.values(splits).reduce((s,v)=>s+v,0);
