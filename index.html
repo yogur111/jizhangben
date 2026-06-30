@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>分账本 💸</title>
+  <title>小分队分账 💸</title>
   <style>
     @font-face {
       font-family: 'Noto Sans SC';
@@ -18,6 +18,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+    const localOnly = new URLSearchParams(location.search).get("local") === "1";
     const firebaseConfig = {
       apiKey: "AIzaSyAmZrMO9O86PXYLNNC7D7GacIhgtXSoQf8",
       authDomain: "jianfei-2744b.firebaseapp.com",
@@ -29,9 +30,13 @@
       measurementId: "G-D84GYDJ9GD"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    window._fb = { db, ref, set, onValue, get, ready: true };
+    if (localOnly) {
+      window._fb = { ready: false, disabled: true };
+    } else {
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      window._fb = { db, ref, set, onValue, get, ready: true };
+    }
     document.dispatchEvent(new Event("firebase-ready"));
   </script>
 
@@ -70,6 +75,7 @@
       position: relative;
     }
 
+    /* ── NOISE TEXTURE ── */
     #app::before {
       content: '';
       position: fixed;
@@ -100,49 +106,24 @@
       padding: 56px 24px 0;
       position: relative; z-index: 1;
     }
-    .header-top {
-      display: flex; align-items: flex-start; justify-content: space-between;
-    }
     .header-eyebrow {
+      font-family: var(--font);
       font-size: 11px; letter-spacing: 0.15em; color: var(--muted);
       text-transform: uppercase; margin-bottom: 6px;
     }
     .header-title {
+      font-family: var(--font);
       font-size: 28px; font-weight: 800; line-height: 1;
       letter-spacing: -0.03em;
     }
     .header-title span { color: var(--accent); }
-    .header-right {
-      display: flex; gap: 6px; margin-top: 2px;
-    }
-    .header-btn {
-      width: 34px; height: 34px; border-radius: 10px;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--muted); cursor: pointer; font-size: 15px;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-    }
-    .header-btn:active { background: var(--surface2); }
-
-    /* ── BOOK SWITCHER ── */
-    .book-name-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 12px 5px 10px; border-radius: 10px;
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s; margin-top: 10px;
-      max-width: 200px;
-    }
-    .book-name-btn:active { background: var(--surface2); }
-    .book-name-label {
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .book-name-arrow { color: var(--muted); font-size: 10px; }
 
     /* ── BALANCE STRIP ── */
     .balance-strip {
-      display: grid; gap: 10px; margin: 20px 24px 0;
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px; margin: 20px 24px 0;
       position: relative; z-index: 1;
+      overflow-x: auto;
     }
     .balance-card {
       border-radius: 16px; padding: 14px 12px;
@@ -150,6 +131,7 @@
       background: var(--surface);
       position: relative; overflow: hidden;
       transition: transform 0.15s;
+      min-width: 112px;
     }
     .balance-card::before {
       content: '';
@@ -157,9 +139,13 @@
       width: 80px; height: 80px; border-radius: 50%;
       opacity: 0.12;
     }
+    .balance-card.dan::before { background: var(--dan); }
+    .balance-card.li::before  { background: var(--li); }
+    .balance-card.ruan::before{ background: var(--ruan); }
     .balance-avatar { font-size: 22px; }
     .balance-name { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; }
     .balance-amt {
+      font-family: var(--font);
       font-size: 18px; font-weight: 800; margin-top: 6px; line-height: 1;
     }
     .balance-amt.positive { color: var(--accent); }
@@ -190,16 +176,41 @@
     }
     .nav-icon { font-size: 15px; }
 
+    /* ── BOOK SWITCHER ── */
+    .book-switcher {
+      margin: 16px 24px 0;
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(200,240,96,0.09), rgba(96,200,240,0.06));
+      border-radius: 16px;
+      padding: 12px 14px;
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      cursor: pointer;
+    }
+    .book-label { font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
+    .book-name { font-size: 16px; font-weight: 800; margin-top: 3px; }
+    .book-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .book-action {
+      width: 36px; height: 36px; border-radius: 12px;
+      border: 1px solid rgba(200,240,96,0.25);
+      background: rgba(200,240,96,0.10);
+      color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
     /* ── CONTENT ── */
     .content { padding: 16px 24px 100px; position: relative; z-index: 1; }
 
+    /* ── SECTION TITLE ── */
     .section-title {
+      font-family: var(--font);
       font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
       color: var(--muted); text-transform: uppercase;
       margin-bottom: 12px;
     }
 
-    /* ── ADD FORM ── */
+    /* ── ADD BILL FORM ── */
     .add-form {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -207,6 +218,7 @@
       margin-bottom: 20px;
     }
     .form-title {
+      font-family: var(--font);
       font-size: 16px; font-weight: 800;
       margin-bottom: 16px; letter-spacing: -0.02em;
     }
@@ -220,7 +232,57 @@
       transition: border-color 0.2s;
     }
     .form-input:focus { border-color: var(--accent); }
+    .form-input.amount-input {
+      font-family: var(--font);
+      font-size: 22px; font-weight: 700;
+    }
 
+    .compact-input-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+    }
+    .mini-btn {
+      min-height: 42px; border-radius: 12px; padding: 0 14px;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text); font-size: 12px; font-weight: 800;
+      font-family: var(--font); cursor: pointer;
+    }
+    .mini-btn.primary { background: var(--accent); border-color: var(--accent); color: #000; }
+    .mini-btn.danger { color: #FF9999; background: rgba(255,107,107,0.06); }
+    .mini-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .book-list { display: grid; gap: 8px; margin-bottom: 18px; }
+    .book-row {
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid var(--border); background: var(--surface2);
+      border-radius: 14px; padding: 12px; cursor: pointer;
+    }
+    .book-row.active { border-color: var(--accent); background: rgba(200,240,96,0.08); }
+    .book-row-main { flex: 1; min-width: 0; }
+    .book-row-name { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .book-row-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .book-row-check { font-size: 16px; color: var(--accent); width: 18px; text-align: center; }
+    .member-editor-row {
+      display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .member-editor-row:last-child { border-bottom: none; }
+    .avatar-input { text-align: center; padding-left: 6px; padding-right: 6px; font-size: 19px; }
+    .avatar-picks { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .avatar-pick {
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px;
+    }
+    .import-textarea {
+      width: 100%; min-height: 92px; resize: vertical;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; color: var(--text);
+      padding: 12px 14px; font-family: var(--font);
+      font-size: 12px; line-height: 1.5; outline: none;
+    }
+    .import-textarea:focus { border-color: var(--accent2); }
+
+    /* Category pills */
     .cat-pills { display: flex; gap: 8px; flex-wrap: wrap; }
     .cat-pill {
       padding: 6px 14px; border-radius: 20px; font-size: 12px;
@@ -229,7 +291,8 @@
     }
     .cat-pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
-    .payer-grid { display: grid; gap: 8px; }
+    /* Payer select */
+    .payer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
     .payer-btn {
       border-radius: 12px; padding: 10px 8px; text-align: center;
       cursor: pointer; border: 1.5px solid var(--border);
@@ -240,7 +303,10 @@
     .payer-btn-name { font-size: 11px; color: var(--muted); margin-top: 3px; }
     .payer-btn.active .payer-btn-name { color: var(--accent); }
 
-    .split-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    /* Split mode */
+    .split-toggle {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
     .split-btn {
       border-radius: 10px; padding: 9px; text-align: center;
       cursor: pointer; border: 1px solid var(--border);
@@ -249,6 +315,7 @@
     }
     .split-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(96,200,240,0.08); }
 
+    /* Participant checkboxes */
     .participant-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 0; border-bottom: 1px solid var(--border);
@@ -269,8 +336,9 @@
       outline: none; text-align: right;
     }
     .participant-custom-amt:focus { border-color: var(--accent2); }
-    .participant-share { font-size: 14px; font-weight: 700; color: var(--accent); }
+    .participant-share { font-family: var(--font); font-size: 14px; font-weight: 700; color: var(--accent); }
 
+    /* Submit btn */
     .submit-btn {
       width: 100%; padding: 14px; border-radius: 14px;
       background: var(--accent); color: #000; border: none;
@@ -300,7 +368,10 @@
     .bill-desc { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bill-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .bill-right { text-align: right; flex-shrink: 0; }
-    .bill-amt { font-size: 16px; font-weight: 800; }
+    .bill-amt {
+      font-family: var(--font);
+      font-size: 16px; font-weight: 800;
+    }
     .bill-payer { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .bill-delete {
       width: 28px; height: 28px; border-radius: 8px;
@@ -311,7 +382,7 @@
     }
     .bill-delete:active { background: rgba(255,80,80,0.2); border-color: #FF6B6B; color: #FF6B6B; }
 
-    /* ── SETTLE ── */
+    /* ── SETTLE UP ── */
     .settle-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -324,6 +395,7 @@
     }
     .settle-name { padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700; }
     .settle-amt {
+      font-family: var(--font);
       font-size: 20px; font-weight: 800; color: var(--accent);
       margin: 8px 0 4px; letter-spacing: -0.02em;
     }
@@ -365,11 +437,15 @@
       font-size: 13px; font-weight: 700; z-index: 2000;
       animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
       white-space: nowrap;
+      font-family: var(--font);
     }
     @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
     @keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
 
-    .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center; padding: 40px 20px; color: var(--muted);
+    }
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
     .empty-text { font-size: 14px; }
 
@@ -393,105 +469,33 @@
       width: 40px; height: 4px; background: var(--border);
       border-radius: 2px; margin: 0 auto 20px;
     }
-    .modal-title {
-      font-size: 18px; font-weight: 800; margin-bottom: 16px;
-      letter-spacing: -0.02em;
+    .drawer-overlay {
+      position: fixed; inset: 0; z-index: 700;
+      background: rgba(0,0,0,0.62);
+      backdrop-filter: blur(5px);
+      display: flex; align-items: flex-end; justify-content: center;
     }
-
-    /* ── BOOK LIST (in modal) ── */
-    .book-list-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px; border-radius: 14px;
+    .drawer-sheet {
+      width: 100%; max-width: 430px;
+      max-height: 82vh; overflow-y: auto;
+      background: var(--surface);
       border: 1px solid var(--border);
-      background: var(--surface2); margin-bottom: 8px;
-      transition: all 0.15s;
+      border-radius: 24px 24px 0 0;
+      padding: 12px 20px 28px;
+      animation: sheetUp 0.28s cubic-bezier(0.34,1.05,0.64,1);
+      box-shadow: 0 -18px 60px rgba(0,0,0,0.45);
     }
-    .book-list-item.current {
-      border-color: var(--accent);
-      background: rgba(200,240,96,0.06);
+    .drawer-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
     }
-    .book-list-info { flex: 1; min-width: 0; }
-    .book-list-name {
-      font-size: 15px; font-weight: 700;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .drawer-title { font-size: 17px; font-weight: 800; }
+    .drawer-close {
+      width: 34px; height: 34px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--muted); font-size: 18px; cursor: pointer;
     }
-    .book-list-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .book-list-actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .book-list-btn {
-      padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
-      cursor: pointer; border: 1px solid var(--border);
-      background: transparent; color: var(--muted);
-      transition: all 0.15s;
-    }
-    .book-list-btn:active { background: var(--surface); }
-    .book-list-btn.primary {
-      background: rgba(200,240,96,0.12); border-color: rgba(200,240,96,0.3); color: var(--accent);
-    }
-    .book-list-btn.danger { color: #FF6B6B; border-color: rgba(255,80,80,0.3); }
-
-    .create-book-btn {
-      width: 100%; padding: 14px; border-radius: 14px;
-      background: var(--accent); color: #000; border: none;
-      font-size: 14px; font-weight: 800; cursor: pointer;
-      font-family: var(--font); margin-top: 12px;
-      transition: all 0.15s;
-    }
-    .create-book-btn:active { transform: scale(0.98); }
-
-    /* ── MEMBER MGMT ── */
-    .member-mgmt-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 0; border-bottom: 1px solid var(--border);
-    }
-    .member-mgmt-item:last-child { border-bottom: none; }
-    .member-mgmt-avatar { font-size: 26px; }
-    .member-mgmt-info { flex: 1; }
-    .member-mgmt-name { font-size: 14px; font-weight: 600; }
-    .member-mgmt-id { font-size: 11px; color: var(--muted); }
-    .member-mgmt-actions { display: flex; gap: 6px; }
-    .member-action-btn {
-      width: 30px; height: 30px; border-radius: 8px;
-      background: transparent; border: 1px solid var(--border);
-      color: var(--muted); cursor: pointer; font-size: 13px;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-    }
-    .member-action-btn:active { background: var(--surface2); }
-    .member-action-btn.danger:active { background: rgba(255,80,80,0.15); border-color: #FF6B6B; color: #FF6B6B; }
-
-    .add-member-form {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 14px; padding: 16px; margin-top: 14px;
-    }
-    .add-member-form-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
-    .avatar-picker {
-      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
-    }
-    .avatar-option {
-      width: 36px; height: 36px; border-radius: 10px;
-      background: var(--surface); border: 1.5px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; cursor: pointer; transition: all 0.15s;
-    }
-    .avatar-option.selected { border-color: var(--accent); background: rgba(200,240,96,0.1); }
-    .add-member-row {
-      display: flex; gap: 8px; align-items: flex-end;
-    }
-    .add-member-input {
-      flex: 1; background: var(--surface);
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 12px; color: var(--text); font-size: 14px;
-      font-family: var(--font); outline: none;
-    }
-    .add-member-input:focus { border-color: var(--accent); }
-    .add-member-submit {
-      padding: 10px 16px; border-radius: 10px;
-      background: var(--accent); color: #000; border: none;
-      font-size: 13px; font-weight: 700; cursor: pointer;
-      font-family: var(--font); white-space: nowrap;
-    }
-    .add-member-submit:active { transform: scale(0.96); }
+    .drawer-list { max-height: 42vh; overflow-y: auto; display: grid; gap: 8px; margin-bottom: 16px; }
 
     /* ── CALCULATOR ── */
     .calc-display {
@@ -521,6 +525,7 @@
     }
     .calc-result {
       font-size: 26px; font-weight: 800; line-height: 1.1;
+      font-family: var(--font);
     }
     .calc-result.zero { color: var(--muted); }
     .calc-result.has-val { color: var(--text); }
@@ -552,6 +557,7 @@
     .calc-key.clear { color: var(--dan); background: rgba(255,107,107,0.06); }
     .calc-key.clear:active { background: rgba(255,107,107,0.18); }
 
+    /* Loading */
     .loading-screen {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
@@ -559,45 +565,26 @@
     }
     .loading-icon { font-size: 52px; animation: pulse 1.5s ease infinite; }
     @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-
-    /* ── INLINE EDIT ── */
-    .inline-edit-input {
-      background: var(--surface); border: 1px solid var(--accent);
-      border-radius: 8px; padding: 4px 8px; color: var(--text);
-      font-size: 14px; font-family: var(--font); font-weight: 600;
-      outline: none; width: 100px;
-    }
-
-    /* ── CONFIRM DIALOG ── */
-    .confirm-overlay {
-      position: fixed; inset: 0; z-index: 600;
-      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      padding: 24px;
-    }
-    .confirm-box {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 18px; padding: 24px; max-width: 320px; width: 100%;
-      text-align: center;
-    }
-    .confirm-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
-    .confirm-msg { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
-    .confirm-btns { display: flex; gap: 8px; }
-    .confirm-btn {
-      flex: 1; padding: 11px; border-radius: 12px; font-size: 14px; font-weight: 700;
-      cursor: pointer; border: 1px solid var(--border); font-family: var(--font);
-      transition: all 0.15s;
-    }
-    .confirm-btn.cancel { background: var(--surface2); color: var(--muted); }
-    .confirm-btn.danger { background: rgba(255,80,80,0.15); border-color: rgba(255,80,80,0.3); color: #FF6B6B; }
-    .confirm-btn:active { transform: scale(0.96); }
   </style>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
-// ===== CONSTANTS =====
+// ===== DEFAULTS =====
+const DEFAULT_MEMBERS = [
+  { id: "dan",  name: "蛋总", avatar: "🥚", color: "var(--dan)"  },
+  { id: "li",   name: "丽总", avatar: "🦦", color: "var(--li)"   },
+  { id: "ruan", name: "小阮", avatar: "🌼", color: "var(--ruan)" },
+];
+
+const MEMBER_COLORS = [
+  "var(--dan)", "var(--li)", "var(--ruan)", "var(--accent)",
+  "var(--accent2)", "var(--accent3)", "#A78BFA", "#F59E0B",
+];
+
+const AVATAR_PRESETS = ["🥚","🦦","🌼","🐰","🐱","🐶","🐼","🦊","🍄","🌙","⭐","🍜","🧋","🚗"];
+
 const CATS = [
   { id: "food",  label: "🍜 吃饭", bg: "rgba(255,107,107,0.15)" },
   { id: "drink", label: "🧋 奶茶", bg: "rgba(255,230,109,0.15)" },
@@ -605,93 +592,226 @@ const CATS = [
   { id: "shop",  label: "🛍️ 购物", bg: "rgba(167,139,250,0.15)" },
   { id: "other", label: "📦 其他", bg: "rgba(200,200,200,0.1)"  },
 ];
+
 const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
 
-const MEMBER_COLORS = [
-  '#FF6B6B','#4ECDC4','#FFE66D','#A78BFA','#F472B6',
-  '#60A5FA','#34D399','#FBBF24','#FB923C','#94A3B8'
-];
-
-const AVATAR_OPTIONS = [
-  '😀','😎','🥚','🦦','🌼','🐱','🐶','🦊','🐼','🐨',
-  '🌟','🔥','💎','🎵','🍀','🌈','🎈','🦄','🐙','🍑',
-  '🍒','🌸','🎭','🧸','🐸','🐧'
-];
-
-const DB_ROOT = "squad_aa_v2";
-const OLD_DB_PATH = "squad_aa_v1";
-const LS_KEY = "squad_aa_v2";
-const OLD_LS_KEY = "squad_aa";
-
+const LEGACY_DB_PATH = "squad_aa_v1";
+const DB_PATH = "squad_aa_books_v2";
 let _isSaving = false;
-let _skipNextSync = false;
 
-// ===== BOOKS STATE =====
-let books = {};
-let currentBookId = null;
-
-function defaultBook(name) {
-  return { name: name || '新账本', members: [], bills: [], settled: [] };
+// ===== STATE =====
+function defaultState() {
+  const book = makeBook("默认账本", DEFAULT_MEMBERS);
+  return { version: 2, activeBookId: book.id, books: { [book.id]: book }, legacyV1ImportedAt: null };
 }
 
-function getCurrentBook() {
-  return books[currentBookId] || defaultBook('空账本');
-}
-
-function getCurrentMembers() {
-  return getCurrentBook().members || [];
-}
-
-// ===== UI STATE =====
+let state = defaultState();
 let ui = {
-  tab: "add",
+  tab: "add",           // add | bills | settle | stats
   syncStatus: "loading",
   toast: null,
-  modal: null,
-  // New book creation temp state
-  newBook: { name: '', members: [{ id: 'm1', name: '成员1', avatar: '😀' }] },
-  newMember: { name: '', avatar: '😀' },
-  editingMemberId: null,
-  editingMemberName: '',
-  confirmDialog: null,
+  bookDrawerOpen: false,
   // form
-  form: {
+  form: makeForm(DEFAULT_MEMBERS),
+  bookForm: {
+    name: "",
+    rename: "",
+    memberName: "",
+    memberAvatar: "",
+    importJson: "",
+  },
+  memberDrafts: {},
+  skipBookInputSync: false,
+  // calculator
+  calc: {
+    tokens: [],   // list of {type:'num'|'op', val} e.g. [{type:'num',val:100},{type:'op',val:'+'},{type:'num',val:30}]
+    current: "",  // current number being typed
+  },
+};
+
+function cloneMembers(members = DEFAULT_MEMBERS) {
+  return members.map((m, i) => ({
+    id: m.id || genId(),
+    name: m.name || `成员${i + 1}`,
+    avatar: m.avatar || AVATAR_PRESETS[i % AVATAR_PRESETS.length],
+    color: m.color || MEMBER_COLORS[i % MEMBER_COLORS.length],
+  }));
+}
+
+function makeBook(name, members = DEFAULT_MEMBERS) {
+  const id = genId();
+  return {
+    id,
+    name: (name || "新账本").trim(),
+    members: cloneMembers(members),
+    bills: [],
+    settled: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+function makeForm(members = DEFAULT_MEMBERS) {
+  const ms = members.length ? members : DEFAULT_MEMBERS;
+  return {
     desc: "",
     amount: "",
     cat: "food",
-    payer: "",
+    payer: ms[0].id,
     splitMode: "equal",
-    participants: {},
-    customAmts: {},
-  },
-  // calculator
-  calc: { tokens: [], current: "" },
-};
-
-function resetFormForCurrentBook() {
-  const members = getCurrentMembers();
-  const participants = {};
-  const customAmts = {};
-  members.forEach(m => { participants[m.id] = true; customAmts[m.id] = ""; });
-  ui.form = {
-    desc: "", amount: "", cat: "food",
-    payer: members.length ? members[0].id : "",
-    splitMode: "equal",
-    participants, customAmts,
+    participants: Object.fromEntries(ms.map(m => [m.id, true])),
+    customAmts: Object.fromEntries(ms.map(m => [m.id, ""])),
   };
+}
+
+function normalizeBook(book, fallbackName = "默认账本") {
+  const members = cloneMembers(book?.members?.length ? book.members : DEFAULT_MEMBERS);
+  return {
+    id: book?.id || genId(),
+    name: (book?.name || fallbackName).trim(),
+    members,
+    bills: Array.isArray(book?.bills) ? book.bills : [],
+    settled: Array.isArray(book?.settled) ? book.settled : [],
+    createdAt: book?.createdAt || Date.now(),
+    updatedAt: book?.updatedAt || book?._updatedAt || Date.now(),
+  };
+}
+
+function migrateLegacyState(raw) {
+  const book = normalizeBook({
+    id: "book_default",
+    name: "默认账本",
+    members: DEFAULT_MEMBERS,
+    bills: raw?.bills || [],
+    settled: raw?.settled || [],
+    updatedAt: raw?._updatedAt,
+  });
+  return { version: 2, activeBookId: book.id, books: { [book.id]: book }, legacyV1ImportedAt: legacyHasData(raw) ? Date.now() : null, _needsSave: legacyHasData(raw) };
+}
+
+function normalizeState(raw) {
+  if (!raw) return defaultState();
+  if (raw.books) {
+    const books = {};
+    Object.values(raw.books).forEach((b, i) => {
+      const book = normalizeBook(b, i === 0 ? "默认账本" : "新账本");
+      books[book.id] = book;
+    });
+    if (!Object.keys(books).length) return defaultState();
+    const activeBookId = books[raw.activeBookId]?.id || Object.keys(books)[0];
+    return {
+      version: 2,
+      activeBookId,
+      books,
+      legacyV1ImportedAt: raw.legacyV1ImportedAt || null,
+    };
+  }
+  return migrateLegacyState(raw);
+}
+
+function legacyHasData(raw) {
+  return !!raw && ((Array.isArray(raw.bills) && raw.bills.length > 0) || (Array.isArray(raw.settled) && raw.settled.length > 0));
+}
+
+function mergeLegacyIntoState(current, legacyRaw) {
+  const next = normalizeState(current);
+  const hasAnyCurrentData = Object.values(next.books).some(book => book.bills.length > 0 || book.settled.length > 0);
+  if (!legacyHasData(legacyRaw) || (next.legacyV1ImportedAt && hasAnyCurrentData)) return next;
+  return mergeLegacyIntoStateForced(next, legacyRaw);
+}
+
+function mergeLegacyIntoStateForced(current, legacyRaw) {
+  const next = normalizeState(current);
+  if (!legacyHasData(legacyRaw)) return next;
+
+  const legacyBook = normalizeBook({
+    id: "book_legacy_v1",
+    name: "旧版账本",
+    members: DEFAULT_MEMBERS,
+    bills: legacyRaw.bills || [],
+    settled: legacyRaw.settled || [],
+    updatedAt: legacyRaw._updatedAt,
+  });
+
+  const books = Object.values(next.books);
+  const onlyEmptyDefault = books.length === 1
+    && books[0].bills.length === 0
+    && books[0].settled.length === 0
+    && books[0].members.length === DEFAULT_MEMBERS.length;
+
+  if (onlyEmptyDefault) {
+    legacyBook.id = books[0].id;
+    legacyBook.name = books[0].name || "默认账本";
+    next.books[legacyBook.id] = legacyBook;
+    next.activeBookId = legacyBook.id;
+  } else {
+    const existingLegacyId = Object.keys(next.books).find(id => id === legacyBook.id || next.books[id].name === "旧版账本");
+    if (existingLegacyId) {
+      legacyBook.id = existingLegacyId;
+    }
+    next.books[legacyBook.id] = legacyBook;
+    if (!next.books[next.activeBookId]?.bills?.length) next.activeBookId = legacyBook.id;
+  }
+
+  next.legacyV1ImportedAt = Date.now();
+  next._needsSave = true;
+  return next;
+}
+
+function getBooks() {
+  state = normalizeState(state);
+  return Object.values(state.books).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+}
+
+function activeBook() {
+  state = normalizeState(state);
+  if (!state.books[state.activeBookId]) {
+    state.activeBookId = Object.keys(state.books)[0];
+  }
+  return state.books[state.activeBookId];
+}
+
+function getMembers() {
+  return activeBook().members;
+}
+
+function rememberActiveBook() {
+  try { localStorage.setItem("squad_aa_active_book", state.activeBookId); } catch {}
+}
+
+function ensureFormForBook() {
+  const members = getMembers();
+  const memberIds = new Set(members.map(m => m.id));
+  if (!memberIds.has(ui.form.payer)) ui.form.payer = members[0]?.id || "";
+  const nextParticipants = {};
+  const nextCustomAmts = {};
+  members.forEach(m => {
+    nextParticipants[m.id] = ui.form.participants[m.id] ?? true;
+    nextCustomAmts[m.id] = ui.form.customAmts[m.id] ?? "";
+  });
+  ui.form.participants = nextParticipants;
+  ui.form.customAmts = nextCustomAmts;
+}
+
+function resetFormForBook() {
+  ui.form = makeForm(getMembers());
   ui.calc = { tokens: [], current: "" };
+  ui.memberDrafts = {};
 }
 
 // ===== FIREBASE =====
-function saveBooks() {
-  const data = { currentBookId, books };
-  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+function saveState(s) {
+  const nextState = normalizeState(s);
+  try {
+    localStorage.setItem("squad_aa_books", JSON.stringify(nextState));
+    rememberActiveBook();
+  } catch {}
   if (window._fb?.ready) {
     _isSaving = true;
     ui.syncStatus = "saving";
     render();
-    window._fb.set(window._fb.ref(window._fb.db, DB_ROOT), {
-      ...data, _updatedAt: Date.now()
+    window._fb.set(window._fb.ref(window._fb.db, DB_PATH), {
+      ...nextState, _updatedAt: Date.now()
     }).then(() => {
       _isSaving = false;
       ui.syncStatus = "saved";
@@ -707,20 +827,16 @@ function saveBooks() {
 
 function startRealtimeSync() {
   if (!window._fb?.ready) return;
-  let firstCallback = true;
-  window._fb.onValue(window._fb.ref(window._fb.db, DB_ROOT), (snap) => {
-    if (firstCallback) { firstCallback = false; return; }
-    if (_isSaving || _skipNextSync) { _skipNextSync = false; return; }
+  window._fb.onValue(window._fb.ref(window._fb.db, DB_PATH), (snap) => {
+    if (_isSaving) return;
     if (snap.exists()) {
-      const d = snap.val();
-      if (d.books) {
-        books = d.books;
-        currentBookId = d.currentBookId;
-        ui.syncStatus = "synced";
-        resetFormForCurrentBook();
-        render();
-        setTimeout(() => { if (ui.syncStatus === "synced") { ui.syncStatus = "idle"; render(); } }, 2000);
-      }
+      state = normalizeState(snap.val());
+      const savedActive = localStorage.getItem("squad_aa_active_book");
+      if (savedActive && state.books[savedActive]) state.activeBookId = savedActive;
+      ensureFormForBook();
+      ui.syncStatus = "synced";
+      render();
+      setTimeout(() => { if (ui.syncStatus === "synced") { ui.syncStatus = "idle"; render(); } }, 2000);
     }
   });
 }
@@ -728,128 +844,60 @@ function startRealtimeSync() {
 async function loadFromFirebase() {
   if (window._fb?.ready) {
     try {
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000));
-      const snap = await Promise.race([
-        window._fb.get(window._fb.ref(window._fb.db, DB_ROOT)),
-        timeout
+      const getWithTimeout = (path) => Promise.race([
+        window._fb.get(window._fb.ref(window._fb.db, path)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000))
       ]);
-      if (snap.exists()) {
-        const d = snap.val();
-        if (d.books) {
-          books = d.books;
-          currentBookId = d.currentBookId;
-          return;
-        }
+      const snap = await getWithTimeout(DB_PATH);
+      const current = snap.exists() ? normalizeState(snap.val()) : null;
+      const legacySnap = await getWithTimeout(LEGACY_DB_PATH);
+      if (legacySnap.exists()) {
+        return current ? mergeLegacyIntoState(current, legacySnap.val()) : migrateLegacyState(legacySnap.val());
       }
-    } catch (e) { console.warn("Firebase load failed:", e.message); }
-  }
-  // Fallback to localStorage
-  try {
-    const stored = JSON.parse(localStorage.getItem(LS_KEY) || "null");
-    if (stored && stored.books) {
-      books = stored.books;
-      currentBookId = stored.currentBookId;
-      return;
+      if (current) return current;
+    } catch (e) {
+      console.warn("Firebase load failed, using local:", e.message);
     }
-  } catch {}
-  // Nothing found — will trigger migration or fresh start
-}
-
-async function migrateOldData() {
-  let oldBills = [], oldSettled = [];
-  let hasOldData = false;
-
-  // Check old Firebase path
-  if (window._fb?.ready) {
-    try {
-      const snap = await window._fb.get(window._fb.ref(window._fb.db, OLD_DB_PATH));
-      if (snap.exists()) {
-        const d = snap.val();
-        oldBills = d.bills || [];
-        oldSettled = d.settled || [];
-        hasOldData = true;
-        // Remove old path
-        window._fb.set(window._fb.ref(window._fb.db, OLD_DB_PATH), null);
-      }
-    } catch {}
   }
-
-  // Check old localStorage
-  if (!hasOldData) {
-    try {
-      const old = JSON.parse(localStorage.getItem(OLD_LS_KEY) || "null");
-      if (old && (old.bills?.length || old.settled?.length)) {
-        oldBills = old.bills || [];
-        oldSettled = old.settled || [];
-        hasOldData = true;
-        localStorage.removeItem(OLD_LS_KEY);
-      }
-    } catch {}
-  }
-
-  if (hasOldData && Object.keys(books).length === 0) {
-    const defaultBookId = genId();
-    books[defaultBookId] = {
-      name: '小分队分账',
-      members: [
-        { id: "dan",  name: "蛋总", avatar: "🥚" },
-        { id: "li",   name: "丽总", avatar: "🦦" },
-        { id: "ruan", name: "小阮", avatar: "🌼" },
-      ],
-      bills: oldBills,
-      settled: oldSettled,
-    };
-    currentBookId = defaultBookId;
-    saveBooks();
-  }
-
-  // If still no books, create a fresh default one
-  if (Object.keys(books).length === 0) {
-    const defaultBookId = genId();
-    books[defaultBookId] = {
-      name: '默认账本',
-      members: [
-        { id: "m1", name: "成员1", avatar: "😀" },
-        { id: "m2", name: "成员2", avatar: "😎" },
-      ],
-      bills: [],
-      settled: [],
-    };
-    currentBookId = defaultBookId;
-    saveBooks();
-  }
-
-  if (!currentBookId || !books[currentBookId]) {
-    currentBookId = Object.keys(books)[0];
-  }
+  try {
+    const saved = JSON.parse(localStorage.getItem("squad_aa_books") || "null");
+    const migrated = normalizeState(saved || JSON.parse(localStorage.getItem("squad_aa") || "null"));
+    const savedActive = localStorage.getItem("squad_aa_active_book");
+    if (savedActive && migrated.books[savedActive]) migrated.activeBookId = savedActive;
+    return migrated;
+  } catch { return defaultState(); }
 }
 
 // ===== HELPERS =====
 function getToday() { return new Date().toLocaleDateString("zh-CN", { month:"numeric", day:"numeric" }); }
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 function fmt(n) { return "¥" + Number(n).toFixed(2); }
-function memberById(id) { return getCurrentMembers().find(m => m.id === id); }
-function getMemberColor(index) { return MEMBER_COLORS[index % MEMBER_COLORS.length]; }
 
-// ===== COMPUTE BALANCES =====
+// Compute net balances
 function computeBalances() {
-  const members = getCurrentMembers();
-  const bal = {};
-  members.forEach(m => { bal[m.id] = 0; });
-  const book = getCurrentBook();
-  (book.bills || []).forEach(b => {
-    if (bal[b.payer] !== undefined) bal[b.payer] += b.amount;
-    Object.entries(b.splits || {}).forEach(([id, amt]) => {
-      if (bal[id] !== undefined) bal[id] -= amt;
+  const book = activeBook();
+  const bal = Object.fromEntries(book.members.map(m => [m.id, 0]));
+  book.bills.forEach(b => {
+    // payer gets credited
+    if (bal[b.payer] == null) bal[b.payer] = 0;
+    bal[b.payer] += b.amount;
+    // each participant owes their share
+    Object.entries(b.splits).forEach(([id, amt]) => {
+      if (bal[id] == null) bal[id] = 0;
+      bal[id] -= amt;
     });
   });
-  (book.settled || []).forEach(s => {
-    if (bal[s.from] !== undefined) bal[s.from] += s.amount;
-    if (bal[s.to] !== undefined) bal[s.to] -= s.amount;
+  // apply settlements
+  book.settled.forEach(s => {
+    if (bal[s.from] == null) bal[s.from] = 0;
+    if (bal[s.to] == null) bal[s.to] = 0;
+    bal[s.from] += s.amount;
+    bal[s.to]   -= s.amount;
   });
   return bal;
 }
 
+// Compute minimum transactions to settle
 function computeSettlements(bal) {
   const debtors  = Object.entries(bal).filter(([,v]) => v < -0.01).map(([k,v]) => ({ id:k, amt:-v }));
   const creditors= Object.entries(bal).filter(([,v]) => v >  0.01).map(([k,v]) => ({ id:k, amt:v }));
@@ -866,8 +914,11 @@ function computeSettlements(bal) {
   return txns;
 }
 
+function memberById(id) { return getMembers().find(m => m.id === id) || { id, name: "旧成员", avatar: "?" }; }
+
 // ===== FORM LOGIC =====
 function formSplits() {
+  ensureFormForBook();
   const f = ui.form;
   const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
   const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
@@ -879,21 +930,28 @@ function formSplits() {
     participants.forEach((id, i) => {
       if (i === participants.length - 1) {
         splits[id] = Math.round((amt - total) * 100) / 100;
-      } else { splits[id] = share; total += share; }
+      } else {
+        splits[id] = share; total += share;
+      }
     });
     return splits;
   } else {
     const splits = {};
-    participants.forEach(id => { splits[id] = parseFloat(f.customAmts[id]) || 0; });
+    participants.forEach(id => {
+      splits[id] = parseFloat(f.customAmts[id]) || 0;
+    });
     return splits;
   }
 }
 
 function formValid() {
+  ensureFormForBook();
   const f = ui.form;
+  // allow pending calc state
   const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
   if (!f.desc.trim() || !amt || amt <= 0) return false;
-  if (!Object.values(f.participants).filter(Boolean).length) return false;
+  const participants = Object.values(f.participants).filter(Boolean).length;
+  if (!participants) return false;
   if (f.splitMode === "custom") {
     const splits = formSplits();
     const total = Object.values(splits).reduce((s,v) => s+v, 0);
@@ -903,30 +961,33 @@ function formValid() {
 }
 
 // ===== ACTIONS =====
+// Sync live input values from DOM before any action that needs them
 function syncInputsNow() {
   const descEl = document.getElementById("descInput");
   if (descEl) ui.form.desc = descEl.value;
+  // amount is now managed via calculator state; sync if calc has pending input
   if (ui.calc.current !== "" || ui.calc.tokens.length > 0) {
     calcKey('confirm');
+    return; // calcKey calls render internally
   }
 }
 
 function syncInputsAndAdd() {
   syncInputsNow();
-  setTimeout(() => {
-    if (!formValid()) {
-      const f = ui.form;
-      const amt = parseFloat(f.amount);
-      if (!f.desc.trim()) { showToast("请填写描述"); return; }
-      if (!amt || amt <= 0) { showToast("请填写金额"); return; }
-      showToast("请检查分摊金额");
-      return;
-    }
-    addBill();
-  }, 10);
+  if (!formValid()) {
+    // Show why it failed
+    const f = ui.form;
+    const amt = parseFloat(f.amount);
+    if (!f.desc.trim()) { showToast("请填写描述"); return; }
+    if (!amt || amt <= 0) { showToast("请填写金额"); return; }
+    showToast("请检查分摊金额");
+    return;
+  }
+  addBill();
 }
 
 function addBill() {
+  // auto-confirm any pending calc
   if (ui.calc.tokens.length > 0 || ui.calc.current !== "") {
     const total = calcTotal();
     if (total > 0) {
@@ -936,36 +997,43 @@ function addBill() {
     }
   }
   if (!formValid()) return;
+  const book = activeBook();
   const f = ui.form;
   const splits = formSplits();
   const bill = {
-    id: genId(), desc: f.desc.trim(),
-    amount: parseFloat(f.amount), cat: f.cat,
-    payer: f.payer, splits, date: getToday(), ts: Date.now(),
+    id: genId(),
+    desc: f.desc.trim(),
+    amount: parseFloat(f.amount),
+    cat: f.cat,
+    payer: f.payer,
+    splits,
+    date: getToday(),
+    ts: Date.now(),
   };
-  const book = getCurrentBook();
   book.bills.push(bill);
-  saveBooks();
-  ui.form.desc = "";
-  ui.form.amount = "";
+  book.updatedAt = Date.now();
+  saveState(state);
+  // reset form
+  ui.form = { ...ui.form, desc: "", amount: "" };
   ui.calc = { tokens: [], current: "" };
   showToast("✅ 记账成功！");
   setTimeout(() => { ui.tab = "bills"; render(); }, 300);
 }
 
 function deleteBill(id) {
-  const book = getCurrentBook();
+  const book = activeBook();
   book.bills = book.bills.filter(b => b.id !== id);
-  saveBooks();
+  book.updatedAt = Date.now();
+  saveState(state);
   showToast("🗑️ 已删除");
 }
 
 function settleUp(from, to, amount) {
-  const book = getCurrentBook();
+  const book = activeBook();
   book.settled.push({ id: genId(), from, to, amount, date: getToday(), ts: Date.now() });
-  saveBooks();
-  const fromM = memberById(from), toM = memberById(to);
-  showToast(`💸 ${fromM?.name || '?'} → ${toM?.name || '?'} ¥${amount.toFixed(2)}`);
+  book.updatedAt = Date.now();
+  saveState(state);
+  showToast(`💸 ${memberById(from).name} → ${memberById(to).name} ¥${amount.toFixed(2)}`);
 }
 
 function showToast(msg) {
@@ -974,175 +1042,267 @@ function showToast(msg) {
   setTimeout(() => { ui.toast = null; render(); }, 2200);
 }
 
-// ===== BOOK ACTIONS =====
-function createBook(name, members) {
-  const id = genId();
-  books[id] = { name: name || '新账本', members: members || [], bills: [], settled: [] };
-  currentBookId = id;
-  saveBooks();
-  resetFormForCurrentBook();
-  ui.modal = null;
-  ui.tab = "add";
-  render();
-  showToast(`📖 已创建「${name}」`);
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[ch]));
+}
+
+function syncBookInputs() {
+  const bookName = document.getElementById("newBookName");
+  const rename = document.getElementById("renameBookInput");
+  const memberName = document.getElementById("newMemberName");
+  const memberAvatar = document.getElementById("newMemberAvatar");
+  const importJson = document.getElementById("importLegacyJson");
+  if (bookName) ui.bookForm.name = bookName.value;
+  if (rename) ui.bookForm.rename = rename.value;
+  if (memberName) ui.bookForm.memberName = memberName.value;
+  if (memberAvatar) ui.bookForm.memberAvatar = memberAvatar.value;
+  if (importJson) ui.bookForm.importJson = importJson.value;
+}
+
+function createBookFromInput() {
+  syncBookInputs();
+  const name = ui.bookForm.name.trim();
+  if (!name) { showToast("请填写账本名"); return; }
+  const book = makeBook(name, DEFAULT_MEMBERS);
+  state.books[book.id] = book;
+  state.activeBookId = book.id;
+  ui.bookDrawerOpen = false;
+  ui.bookForm.name = "";
+  ui.bookForm.rename = book.name;
+  ui.skipBookInputSync = true;
+  resetFormForBook();
+  rememberActiveBook();
+  saveState(state);
+  showToast("📒 已创建新账本");
 }
 
 function switchBook(id) {
-  if (id === currentBookId) return;
-  currentBookId = id;
-  saveBooks();
-  resetFormForCurrentBook();
-  ui.modal = null;
-  ui.tab = "add";
+  if (!state.books[id]) return;
+  state.activeBookId = id;
+  ui.bookForm.rename = activeBook().name;
+  ui.bookDrawerOpen = false;
+  resetFormForBook();
+  rememberActiveBook();
   render();
-  const book = getCurrentBook();
-  showToast(`📖 已切换到「${book.name}」`);
 }
 
-function deleteBook(id) {
-  const book = books[id];
-  if (!book) return;
-  const bookCount = Object.keys(books).length;
-  if (bookCount <= 1) {
-    showToast("至少保留一个账本");
+function renameCurrentBook() {
+  syncBookInputs();
+  const book = activeBook();
+  const name = ui.bookForm.rename.trim();
+  if (!name) { showToast("账本名不能为空"); return; }
+  book.name = name;
+  book.updatedAt = Date.now();
+  saveState(state);
+  showToast("已重命名");
+}
+
+function deleteCurrentBook() {
+  const books = getBooks();
+  if (books.length <= 1) { showToast("至少保留一个账本"); return; }
+  const book = activeBook();
+  delete state.books[book.id];
+  state.activeBookId = Object.keys(state.books)[0];
+  ui.bookForm.rename = activeBook().name;
+  resetFormForBook();
+  rememberActiveBook();
+  saveState(state);
+  showToast("已删除账本");
+}
+
+function addMemberFromInput() {
+  syncBookInputs();
+  const name = ui.bookForm.memberName.trim();
+  const avatar = ui.bookForm.memberAvatar.trim() || AVATAR_PRESETS[getMembers().length % AVATAR_PRESETS.length];
+  if (!name) { showToast("请填写成员名"); return; }
+  const book = activeBook();
+  const member = { id: genId(), name, avatar, color: MEMBER_COLORS[book.members.length % MEMBER_COLORS.length] };
+  book.members.push(member);
+  ui.form.participants[member.id] = true;
+  ui.form.customAmts[member.id] = "";
+  ui.bookForm.memberName = "";
+  ui.bookForm.memberAvatar = "";
+  ui.skipBookInputSync = true;
+  book.updatedAt = Date.now();
+  saveState(state);
+  showToast("已添加成员");
+}
+
+function updateMember(id, field, value) {
+  const book = activeBook();
+  const member = book.members.find(m => m.id === id);
+  if (!member) return;
+  const nextValue = value.trim() || member[field];
+  delete ui.memberDrafts[`${id}:${field}`];
+  if (member[field] === nextValue) {
+    render();
     return;
   }
-  ui.confirmDialog = {
-    title: '删除账本',
-    msg: `确定删除「${book.name}」吗？该账本有 ${(book.bills||[]).length} 条账单，删除后无法恢复。`,
-    onConfirm: () => {
-      delete books[id];
-      if (currentBookId === id) {
-        currentBookId = Object.keys(books)[0];
-        resetFormForCurrentBook();
-      }
-      saveBooks();
-      ui.confirmDialog = null;
-      ui.modal = 'manageBooks';
+  member[field] = nextValue;
+  book.updatedAt = Date.now();
+  saveState(state);
+}
+
+function memberInUse(id) {
+  const book = activeBook();
+  return book.bills.some(b => b.payer === id || Object.prototype.hasOwnProperty.call(b.splits || {}, id))
+    || book.settled.some(s => s.from === id || s.to === id);
+}
+
+function deleteMember(id) {
+  const book = activeBook();
+  if (book.members.length <= 1) { showToast("至少保留一个成员"); return; }
+  if (memberInUse(id)) { showToast("这个成员已有账单，不能删除"); return; }
+  book.members = book.members.filter(m => m.id !== id);
+  delete ui.form.participants[id];
+  delete ui.form.customAmts[id];
+  delete ui.memberDrafts[`${id}:avatar`];
+  delete ui.memberDrafts[`${id}:name`];
+  if (ui.form.payer === id) ui.form.payer = book.members[0].id;
+  book.updatedAt = Date.now();
+  saveState(state);
+  showToast("已删除成员");
+}
+
+async function restoreLegacyBook() {
+  let legacyRaw = null;
+  try {
+    const localRaw = JSON.parse(localStorage.getItem("squad_aa") || "null");
+    if (legacyHasData(localRaw)) legacyRaw = localRaw;
+  } catch {}
+
+  if (!legacyRaw && window._fb?.ready) {
+    try {
+      ui.syncStatus = "loading";
       render();
-      showToast("🗑️ 已删除");
-    }
-  };
-  render();
-}
-
-function renameBook(id, newName) {
-  if (!newName.trim()) return;
-  books[id].name = newName.trim();
-  saveBooks();
-  render();
-}
-
-// ===== MEMBER ACTIONS =====
-function addMemberToBook(name, avatar) {
-  // Sync from DOM input in case oninput hasn't fired
-  const nameInput = document.querySelector('.add-member-input');
-  if (nameInput && nameInput.value) name = nameInput.value;
-  if (!name || !name.trim()) return;
-  const book = getCurrentBook();
-  const id = 'm' + genId().slice(0, 6);
-  book.members.push({ id, name: name.trim(), avatar: avatar || '😀' });
-  saveBooks();
-  // Update form state
-  ui.form.participants[id] = true;
-  ui.form.customAmts[id] = "";
-  if (!ui.form.payer) ui.form.payer = id;
-  ui.newMember = { name: '', avatar: '😀' };
-  render();
-  showToast(`已添加 ${name}`);
-}
-
-function deleteMember(memberId) {
-  const book = getCurrentBook();
-  if (book.members.length <= 2) {
-    showToast("账本至少保留2个成员");
-    return;
-  }
-  const member = book.members.find(m => m.id === memberId);
-  ui.confirmDialog = {
-    title: '移除成员',
-    msg: `确定移除「${member?.name}」吗？已有账单中的记录不会被删除。`,
-    onConfirm: () => {
-      book.members = book.members.filter(m => m.id !== memberId);
-      delete ui.form.participants[memberId];
-      delete ui.form.customAmts[memberId];
-      if (ui.form.payer === memberId) {
-        ui.form.payer = book.members[0]?.id || "";
+      const legacySnap = await Promise.race([
+        window._fb.get(window._fb.ref(window._fb.db, LEGACY_DB_PATH)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 7000))
+      ]);
+      if (legacySnap.exists() && legacyHasData(legacySnap.val())) {
+        legacyRaw = legacySnap.val();
       }
-      saveBooks();
-      ui.confirmDialog = null;
-      ui.modal = 'manageMembers';
-      render();
-      showToast("已移除");
+    } catch (e) {
+      console.warn("Legacy restore failed:", e.message);
     }
-  };
-  render();
-}
-
-function saveMemberEdit(memberId) {
-  const book = getCurrentBook();
-  const member = book.members.find(m => m.id === memberId);
-  if (member && ui.editingMemberName.trim()) {
-    member.name = ui.editingMemberName.trim();
-    saveBooks();
   }
-  ui.editingMemberId = null;
-  ui.editingMemberName = '';
-  render();
-}
 
-function changeMemberAvatar(memberId, avatar) {
-  const book = getCurrentBook();
-  const member = book.members.find(m => m.id === memberId);
-  if (member) { member.avatar = avatar; saveBooks(); render(); }
-}
-
-// ===== NEW BOOK HELPERS =====
-function addMemberToNewBook() {
-  const nb = ui.newBook;
-  if (!nb.name.trim() && nb.members.length === 0) {
-    showToast("请先填写账本名称");
+  if (!legacyRaw) {
+    ui.syncStatus = "idle";
+    render();
+    showToast("没找到旧版数据");
     return;
   }
-  // Sync name from DOM input
-  const nameInput = document.querySelector('.add-member-input');
-  if (nameInput && nameInput.value) ui.newMember.name = nameInput.value;
-  const m = ui.newMember;
-  if (!m.name.trim()) { showToast("请填写成员名称"); return; }
-  nb.members.push({ id: 'nm' + genId().slice(0, 5), name: m.name.trim(), avatar: m.avatar });
-  ui.newMember = { name: '', avatar: m.avatar };
-  render();
+
+  state = mergeLegacyIntoStateForced(state, legacyRaw);
+  delete state._needsSave;
+  ensureFormForBook();
+  ui.tab = "books";
+  ui.syncStatus = "idle";
+  saveState(state);
+  showToast("已恢复旧版账本");
 }
 
-function removeMemberFromNewBook(index) {
-  if (ui.newBook.members.length <= 0) return;
-  ui.newBook.members.splice(index, 1);
-  render();
+function importLegacyJson() {
+  syncBookInputs();
+  const raw = ui.bookForm.importJson.trim();
+  if (!raw) { showToast("请粘贴旧版数据"); return; }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    showToast("JSON 格式不对");
+    return;
+  }
+
+  if (parsed?.books) {
+    const imported = normalizeState(parsed);
+    Object.values(imported.books).forEach(book => {
+      const id = state.books[book.id] ? genId() : book.id;
+      state.books[id] = { ...book, id, name: `${book.name || "导入账本"}` };
+      state.activeBookId = id;
+    });
+  } else if (legacyHasData(parsed)) {
+    state = mergeLegacyIntoStateForced(state, parsed);
+  } else {
+    showToast("没识别到账单数据");
+    return;
+  }
+
+  delete state._needsSave;
+  ui.bookForm.importJson = "";
+  ui.skipBookInputSync = true;
+  ensureFormForBook();
+  ui.tab = "books";
+  saveState(state);
+  showToast("导入成功");
 }
 
-function submitNewBook() {
-  // Sync book name from DOM input
-  const nameInput = document.querySelector('.modal-sheet .form-input');
-  if (nameInput && nameInput.value) ui.newBook.name = nameInput.value;
-  const nb = ui.newBook;
-  if (!nb.name.trim()) { showToast("请填写账本名称"); return; }
-  if (nb.members.length < 2) { showToast("至少添加2个成员"); return; }
-  const members = nb.members.map(m => ({
-    id: 'm' + genId().slice(0, 6), name: m.name, avatar: m.avatar
-  }));
-  createBook(nb.name.trim(), members);
-  ui.newBook = { name: '', members: [] };
-  ui.newMember = { name: '', avatar: '😀' };
+// ===== CALCULATOR UI =====
+function buildCalc() {
+  const c = ui.calc;
+  const hasActivity = c.tokens.length > 0 || c.current !== "";
+  const liveTotal = hasActivity ? calcTotal() : 0;
+  const displayVal = ui.form.amount && !hasActivity
+    ? ui.form.amount
+    : hasActivity ? String(Math.round(liveTotal * 100) / 100) : "";
+
+  // Build expression string for display
+  let exprParts = [];
+  c.tokens.forEach(t => {
+    if (t.type === 'num') {
+      exprParts.push(`<span class="calc-expr-chip">${t.val}</span>`);
+    } else {
+      exprParts.push(`<span class="calc-op-sym">${t.val}</span>`);
+    }
+  });
+  if (c.current !== "") {
+    exprParts.push(`<span class="calc-expr-chip active">${c.current}</span>`);
+  }
+  const exprHtml = exprParts.join("");
+
+  const displayClass = hasActivity ? "calc-display has-expr" : "calc-display";
+  const resultClass = displayVal ? "calc-result has-val" : "calc-result zero";
+  const resultText = displayVal || "0.00";
+
+  const hasOp = c.tokens.some(t => t.type === 'op');
+  const confirmLabel = hasOp
+    ? `= ¥${Math.round(liveTotal*100)/100}`
+    : (hasActivity ? `✓ 确认` : "确认金额");
+
+  const keys = [
+    { label: "7", key: "7" }, { label: "8", key: "8" }, { label: "9", key: "9" }, { label: "÷", key: "÷", cls: "op" },
+    { label: "4", key: "4" }, { label: "5", key: "5" }, { label: "6", key: "6" }, { label: "×", key: "×", cls: "op" },
+    { label: "1", key: "1" }, { label: "2", key: "2" }, { label: "3", key: "3" }, { label: "−", key: "-", cls: "op" },
+    { label: "0", key: "0" }, { label: ".", key: "." }, { label: "⌫", key: "del", cls: "del" }, { label: "+", key: "+", cls: "op" },
+    { label: "C", key: "clear", cls: "clear" }, { label: confirmLabel, key: "confirm", cls: "confirm" },
+  ];
+
+  let kHtml = keys.map(k =>
+    `<div class="calc-key ${k.cls||""}" onclick="calcKey('${k.key}')">${k.label}</div>`
+  ).join("");
+
+  return `<div class="${displayClass}">
+    <div class="calc-expr">${exprHtml || '<span style="color:var(--muted);font-size:12px">输入金额，支持 + − × ÷</span>'}</div>
+    <div class="${resultClass}">¥${resultText}</div>
+  </div>
+  <div class="calc-keypad">${kHtml}</div>`;
 }
 
 // ===== CALCULATOR =====
 function calcEval(tokens) {
+  // tokens: array of {type:'num'|'op', val}
+  // Two-pass: first handle * and /, then + and -
   if (!tokens.length) return 0;
+  // build flat array of nums and ops
   const nums = [], ops = [];
   tokens.forEach(t => {
     if (t.type === 'num') nums.push(t.val);
     else ops.push(t.val);
   });
+  // pass 1: * and /
   let i = 0;
   while (i < ops.length) {
     if (ops[i] === '×' || ops[i] === '÷') {
@@ -1152,6 +1312,7 @@ function calcEval(tokens) {
       ops.splice(i, 1);
     } else { i++; }
   }
+  // pass 2: + and -
   let result = nums[0] || 0;
   for (let j = 0; j < ops.length; j++) {
     if (ops[j] === '+') result += nums[j+1];
@@ -1176,58 +1337,94 @@ function calcKey(key) {
       c.current = c.current.slice(0, -1);
     } else if (c.tokens.length > 0) {
       const last = c.tokens[c.tokens.length - 1];
-      if (last.type === 'op') { c.tokens.pop(); }
-      else { c.tokens.pop(); c.current = String(last.val); }
+      if (last.type === 'op') {
+        c.tokens.pop(); // remove operator, go back to editing prev number
+      } else {
+        c.tokens.pop();
+        c.current = String(last.val);
+      }
     }
   } else if (key === 'clear') {
-    c.tokens = []; c.current = ""; ui.form.amount = "";
+    c.tokens = [];
+    c.current = "";
+    ui.form.amount = "";
   } else if (isOp) {
-    if (c.current !== "") { c.tokens.push({ type: 'num', val: parseFloat(c.current) || 0 }); c.current = ""; }
+    // if we have a current number, push it first
+    if (c.current !== "") {
+      c.tokens.push({ type: 'num', val: parseFloat(c.current) || 0 });
+      c.current = "";
+    }
+    // replace last op if last token is already an op
     if (c.tokens.length > 0 && c.tokens[c.tokens.length-1].type === 'op') {
       c.tokens[c.tokens.length-1].val = key;
     } else if (c.tokens.length > 0) {
       c.tokens.push({ type: 'op', val: key });
-    } else if (key === '-') {
+    }
+    // if no tokens yet and op is '-', start negative number
+    else if (key === '-') {
       c.current = '-';
     }
   } else if (key === 'confirm') {
-    if (c.current !== "") { c.tokens.push({ type: 'num', val: parseFloat(c.current) || 0 }); c.current = ""; }
+    if (c.current !== "") {
+      c.tokens.push({ type: 'num', val: parseFloat(c.current) || 0 });
+      c.current = "";
+    }
+    // remove trailing op if any
     if (c.tokens.length > 0 && c.tokens[c.tokens.length-1].type === 'op') c.tokens.pop();
     const total = calcEval(c.tokens);
     if (total > 0) {
       ui.form.amount = String(Math.round(total * 100) / 100);
-      c.tokens = []; c.current = "";
+      c.tokens = [];
+      c.current = "";
     }
   } else if (key === '.') {
     if (!c.current.includes('.')) {
       c.current = c.current === "" || c.current === "-" ? (c.current + "0.") : c.current + '.';
     }
   } else {
-    if (c.current === "0") { c.current = key; }
-    else { c.current += key; }
+    // digit
+    if (c.current === "0") {
+      c.current = key;
+    } else {
+      c.current += key;
+    }
   }
   render();
 }
 
 // ===== RENDER =====
 function render() {
+  ensureFormForBook();
+  // Save desc input before wiping DOM
   const descEl = document.getElementById("descInput");
   if (descEl) ui.form.desc = descEl.value;
+  if (ui.skipBookInputSync) {
+    ui.skipBookInputSync = false;
+  } else {
+    syncBookInputs();
+  }
 
   document.getElementById("app").innerHTML = buildApp();
 
+  // Restore desc value after DOM rebuild
   const newDesc = document.getElementById("descInput");
   if (newDesc) newDesc.value = ui.form.desc;
-
-  // Focus management for inline edit
-  if (ui.editingMemberId) {
-    const editInput = document.getElementById("memberEditInput");
-    if (editInput) { editInput.focus(); editInput.select(); }
-  }
+  const newBookName = document.getElementById("newBookName");
+  if (newBookName) newBookName.value = ui.bookForm.name;
+  const rename = document.getElementById("renameBookInput");
+  if (rename) rename.value = ui.bookForm.rename || activeBook().name;
+  const memberName = document.getElementById("newMemberName");
+  if (memberName) memberName.value = ui.bookForm.memberName;
+  const memberAvatar = document.getElementById("newMemberAvatar");
+  if (memberAvatar) memberAvatar.value = ui.bookForm.memberAvatar;
+  const importJson = document.getElementById("importLegacyJson");
+  if (importJson) importJson.value = ui.bookForm.importJson;
 }
 
 function buildApp() {
   let h = "";
+  const book = activeBook();
+  const members = getMembers();
 
   // SYNC BAR
   const syncLabels = {
@@ -1243,60 +1440,80 @@ function buildApp() {
   }
 
   // TOAST
-  if (ui.toast) h += `<div class="toast">${ui.toast}</div>`;
+  if (ui.toast) {
+    h += `<div class="toast">${ui.toast}</div>`;
+  }
 
-  // CONFIRM DIALOG
-  if (ui.confirmDialog) {
-    h += buildConfirmDialog();
+  if (ui.bookDrawerOpen) {
+    const books = getBooks();
+    h += `<div class="drawer-overlay" onclick="if(event.target===this){ui.bookDrawerOpen=false;render()}">
+      <div class="drawer-sheet">
+        <div class="modal-handle"></div>
+        <div class="drawer-header">
+          <div>
+            <div class="book-label">Switch Book</div>
+            <div class="drawer-title">切换账本</div>
+          </div>
+          <button class="drawer-close" onclick="ui.bookDrawerOpen=false;render()">×</button>
+        </div>
+        <div class="drawer-list">`;
+    books.forEach(bk => {
+      const active = bk.id === book.id;
+      h += `<div class="book-row${active ? " active" : ""}" onclick="switchBook('${bk.id}')">
+        <div class="book-row-main">
+          <div class="book-row-name">${esc(bk.name)}</div>
+          <div class="book-row-meta">${bk.members.length} 人 · ${bk.bills.length} 笔 · ${fmt(bk.bills.reduce((s,b)=>s+b.amount,0))}</div>
+        </div>
+        <div class="book-row-check">${active ? "✓" : ""}</div>
+      </div>`;
+    });
+    h += `</div>
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-label">新开账本</div>
+          <div class="compact-input-row">
+            <input class="form-input" id="newBookName" type="text" placeholder="比如：重庆旅行、办公室午饭">
+            <button class="mini-btn primary" onclick="createBookFromInput()">新建</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
   }
 
   // LOADING SCREEN
   if (ui.syncStatus === "loading") {
     h += `<div class="loading-screen">
       <div class="loading-icon">💸</div>
-      <div style="font-size:18px;font-weight:800">分账本</div>
+      <div style="font-family:var(--font);font-size:18px;font-weight:800">小分队分账</div>
       <div style="font-size:13px;color:var(--muted)">正在加载数据…</div>
     </div>`;
     return h;
   }
 
-  // MODAL
-  if (ui.modal) h += buildModal();
-
-  const book = getCurrentBook();
-  const members = getCurrentMembers();
-  const bal = computeBalances();
-
   // HEADER
+  const bal = computeBalances();
   h += `<div class="header">
-    <div class="header-top">
-      <div>
-        <div class="header-eyebrow">Squad AA · 分账本</div>
-        <div class="header-title">分<span>账</span></div>
-      </div>
-      <div class="header-right">
-        <div class="header-btn" onclick="ui.modal='manageMembers';render()" title="管理成员">👥</div>
-      </div>
+    <div class="header-eyebrow">Squad AA · 小分队</div>
+    <div class="header-title">分<span>账</span>本</div>
+  </div>`;
+
+  h += `<div class="book-switcher" onclick="ui.bookDrawerOpen=true;render()">
+    <div>
+      <div class="book-label">Current Book</div>
+      <div class="book-name">${esc(book.name)}</div>
+      <div class="book-meta">${members.length} 人 · ${book.bills.length} 笔账单</div>
     </div>
-    <div class="book-name-btn" onclick="ui.modal='manageBooks';render()">
-      <span style="font-size:14px">📖</span>
-      <span class="book-name-label">${book.name}</span>
-      <span class="book-name-arrow">▼</span>
-    </div>
+    <div class="book-action">⇄</div>
   </div>`;
 
   // BALANCE STRIP
-  const gridCols = members.length <= 3 ? `repeat(${members.length}, 1fr)` : `repeat(${Math.min(members.length, 4)}, 1fr)`;
-  h += `<div class="balance-strip" style="grid-template-columns:${gridCols}">`;
-  members.forEach((m, idx) => {
-    const b = bal[m.id] || 0;
+  h += `<div class="balance-strip" style="grid-template-columns:repeat(${members.length},minmax(112px,1fr))">`;
+  members.forEach(m => {
+    const b = bal[m.id];
     const cls = b > 0.01 ? "positive" : b < -0.01 ? "negative" : "zero";
     const label = b > 0.01 ? "待收" : b < -0.01 ? "待付" : "已结清";
-    const color = getMemberColor(idx);
-    h += `<div class="balance-card">
-      <div style="position:absolute;top:-30px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:0.12;background:${color}"></div>
-      <div class="balance-avatar">${m.avatar}</div>
-      <div class="balance-name">${m.name}</div>
+    h += `<div class="balance-card ${m.id}">
+      <div class="balance-avatar">${esc(m.avatar)}</div>
+      <div class="balance-name">${esc(m.name)}</div>
       <div class="balance-amt ${cls}">${b >= 0 ? "+" : ""}${b.toFixed(0)}</div>
       <div class="balance-label">${label}</div>
     </div>`;
@@ -1305,10 +1522,11 @@ function buildApp() {
 
   // NAV
   const tabs = [
-    { key:"add",    icon:"✚",   label:"记账" },
+    { key:"add",    icon:"✚", label:"记账" },
     { key:"bills",  icon:"📋", label:"账单" },
     { key:"settle", icon:"💸", label:"结算" },
     { key:"stats",  icon:"📊", label:"统计" },
+    { key:"books",  icon:"📒", label:"账本" },
   ];
   h += `<div class="nav">`;
   tabs.forEach(t => {
@@ -1320,462 +1538,272 @@ function buildApp() {
 
   h += `<div class="content">`;
 
-  if (ui.tab === "add") h += buildAddTab();
-  else if (ui.tab === "bills") h += buildBillsTab();
-  else if (ui.tab === "settle") h += buildSettleTab();
-  else if (ui.tab === "stats") h += buildStatsTab();
+  // ══ TAB: ADD ══
+  if (ui.tab === "add") {
+    const f = ui.form;
+    const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
+    const splits = formSplits();
+    const participants = Object.entries(f.participants).filter(([,v]) => v).map(([k]) => k);
+    const splitTotal = Object.values(splits).reduce((s,v)=>s+v,0);
+    const splitOk = f.splitMode === "equal" || Math.abs(splitTotal - amt) < 0.01;
 
-  h += `</div>`;
-  return h;
-}
-
-// ===== BUILD ADD TAB =====
-function buildAddTab() {
-  const f = ui.form;
-  const members = getCurrentMembers();
-  const amt = parseFloat(f.amount) || (ui.calc.tokens.length > 0 || ui.calc.current ? calcTotal() : 0);
-  const splits = formSplits();
-  const splitTotal = Object.values(splits).reduce((s,v)=>s+v,0);
-
-  if (!members.length) {
-    return `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">请先添加成员</div></div>`;
-  }
-
-  let h = `<div class="add-form">
-    <div class="form-title">+ 新增账单</div>
-
-    <div class="form-row">
-      <div class="form-label">金额 <span style="color:var(--accent2);font-size:10px;font-weight:500">· 可叠加多项</span></div>
-      ${buildCalc()}
-    </div>
-
-    <div class="form-row">
-      <div class="form-label">描述</div>
-      <input class="form-input" type="text" placeholder="比如：晚饭、奶茶、打车…"
-        id="descInput"
-        onblur="ui.form.desc=this.value"
-        onkeydown="if(event.key==='Enter'){ui.form.desc=this.value;render()}">
-    </div>
-
-    <div class="form-row">
-      <div class="form-label">分类</div>
-      <div class="cat-pills">`;
-  CATS.forEach(c => {
-    h += `<div class="cat-pill${f.cat===c.id?" active":""}" onclick="ui.form.cat='${c.id}';render()">${c.label}</div>`;
-  });
-  h += `</div></div>
-
-    <div class="form-row">
-      <div class="form-label">谁付了钱</div>
-      <div class="payer-grid" style="grid-template-columns:repeat(${Math.min(members.length,4)},1fr)">`;
-  members.forEach(m => {
-    h += `<div class="payer-btn${f.payer===m.id?" active":""}" onclick="ui.form.payer='${m.id}';render()">
-      <div class="payer-btn-avatar">${m.avatar}</div>
-      <div class="payer-btn-name">${m.name}</div>
-    </div>`;
-  });
-  h += `</div></div>
-
-    <div class="form-row">
-      <div class="form-label">分摊方式</div>
-      <div class="split-toggle">
-        <div class="split-btn${f.splitMode==="equal"?" active":""}" onclick="ui.form.splitMode='equal';render()">⚖️ 平均分</div>
-        <div class="split-btn${f.splitMode==="custom"?" active":""}" onclick="ui.form.splitMode='custom';render()">✏️ 自定义</div>
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-label">参与人 & 分摊</div>`;
-
-  members.forEach(m => {
-    const checked = f.participants[m.id];
-    const share = splits[m.id] || 0;
-    h += `<div class="participant-row">
-      <div class="participant-left">
-        <div class="participant-check${checked?" checked":""}" onclick="ui.form.participants['${m.id}']=!ui.form.participants['${m.id}'];render()">
-          ${checked?"✓":""}
-        </div>
-        <span style="font-size:18px">${m.avatar}</span>
-        <span>${m.name}</span>
-      </div>`;
-    if (f.splitMode === "custom" && checked) {
-      h += `<input class="participant-custom-amt" type="number" inputmode="decimal"
-        placeholder="0.00" value="${f.customAmts[m.id]||''}"
-        oninput="ui.form.customAmts['${m.id}']=this.value">`;
-    } else if (f.splitMode === "equal" && checked) {
-      h += `<div class="participant-share">${fmt(share)}</div>`;
-    } else {
-      h += `<div style="color:var(--muted);font-size:12px">不参与</div>`;
-    }
-    h += `</div>`;
-  });
-
-  if (f.splitMode === "custom" && amt > 0) {
-    const diff = Math.abs(splitTotal - amt);
-    const color = diff < 0.01 ? "var(--accent)" : "#FF6B6B";
-    h += `<div style="text-align:right;font-size:12px;color:${color};margin-top:8px;font-weight:700">
-      已分：${fmt(splitTotal)} / ${fmt(amt)} ${diff<0.01?"✓":`(差 ${fmt(diff)})`}
-    </div>`;
-  }
-  h += `</div>
-
-    <button class="submit-btn" onclick="syncInputsAndAdd()">记一笔</button>
-  </div>`;
-  return h;
-}
-
-// ===== BUILD CALCULATOR =====
-function buildCalc() {
-  const c = ui.calc;
-  const hasActivity = c.tokens.length > 0 || c.current !== "";
-  const liveTotal = hasActivity ? calcTotal() : 0;
-  const displayVal = ui.form.amount && !hasActivity
-    ? ui.form.amount
-    : hasActivity ? String(Math.round(liveTotal * 100) / 100) : "";
-
-  let exprParts = [];
-  c.tokens.forEach(t => {
-    if (t.type === 'num') exprParts.push(`<span class="calc-expr-chip">${t.val}</span>`);
-    else exprParts.push(`<span class="calc-op-sym">${t.val}</span>`);
-  });
-  if (c.current !== "") exprParts.push(`<span class="calc-expr-chip active">${c.current}</span>`);
-
-  const displayClass = hasActivity ? "calc-display has-expr" : "calc-display";
-  const resultClass = displayVal ? "calc-result has-val" : "calc-result zero";
-  const resultText = displayVal || "0.00";
-
-  const hasOp = c.tokens.some(t => t.type === 'op');
-  const confirmLabel = hasOp
-    ? `= ¥${Math.round(liveTotal*100)/100}`
-    : (hasActivity ? `✓ 确认` : "确认金额");
-
-  const keys = [
-    { label: "7", key: "7" }, { label: "8", key: "8" }, { label: "9", key: "9" }, { label: "÷", key: "÷", cls: "op" },
-    { label: "4", key: "4" }, { label: "5", key: "5" }, { label: "6", key: "6" }, { label: "×", key: "×", cls: "op" },
-    { label: "1", key: "1" }, { label: "2", key: "2" }, { label: "3", key: "3" }, { label: "−", key: "-", cls: "op" },
-    { label: "0", key: "0" }, { label: ".", key: "." }, { label: "⌫", key: "del", cls: "del" }, { label: "+", key: "+", cls: "op" },
-    { label: "C", key: "clear", cls: "clear" }, { label: confirmLabel, key: "confirm", cls: "confirm" },
-  ];
-
-  let kHtml = keys.map(k =>
-    `<div class="calc-key ${k.cls||""}" onclick="calcKey('${k.key}')">${k.label}</div>`
-  ).join("");
-
-  return `<div class="${displayClass}">
-    <div class="calc-expr">${exprParts.join("") || '<span style="color:var(--muted);font-size:12px">输入金额，支持 + − × ÷</span>'}</div>
-    <div class="${resultClass}">¥${resultText}</div>
-  </div>
-  <div class="calc-keypad">${kHtml}</div>`;
-}
-
-// ===== BUILD BILLS TAB =====
-function buildBillsTab() {
-  const book = getCurrentBook();
-  const bills = [...(book.bills || [])].sort((a,b) => b.ts - a.ts);
-  if (!bills.length) {
-    return `<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">还没有账单，去记第一笔吧~</div></div>`;
-  }
-  let h = `<div class="section-title">共 ${bills.length} 笔 · 合计 ${fmt(bills.reduce((s,b)=>s+b.amount,0))}</div>`;
-  bills.forEach(b => {
-    const cat = CAT_MAP[b.cat] || CAT_MAP.other;
-    const payer = memberById(b.payer);
-    const splitDesc = Object.entries(b.splits||{}).map(([id,amt]) => {
-      const m = memberById(id);
-      return `${m ? m.avatar : '?'}${fmt(amt)}`;
-    }).join(" ");
-    h += `<div class="bill-item">
-      <div class="bill-cat-icon" style="background:${cat.bg}">${cat.label.split(" ")[0]}</div>
-      <div class="bill-info">
-        <div class="bill-desc">${b.desc}</div>
-        <div class="bill-meta">${b.date} · ${splitDesc}</div>
-      </div>
-      <div class="bill-right">
-        <div class="bill-amt">${fmt(b.amount)}</div>
-        <div class="bill-payer">${payer?.avatar || ''} 付款</div>
-      </div>
-      <button class="bill-delete" onclick="deleteBill('${b.id}')">×</button>
-    </div>`;
-  });
-  return h;
-}
-
-// ===== BUILD SETTLE TAB =====
-function buildSettleTab() {
-  const book = getCurrentBook();
-  const bal = computeBalances();
-  const txns = computeSettlements({ ...bal });
-
-  let h = "";
-  if (txns.length === 0) {
-    h += `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">大家都结清了！太棒了~</div></div>`;
-  } else {
-    h += `<div class="section-title">最优结算方案</div>`;
-    txns.forEach(t => {
-      const from = memberById(t.from);
-      const to   = memberById(t.to);
-      h += `<div class="settle-card">
-        <div class="settle-arrow">
-          <span style="font-size:22px">${from?.avatar||'?'}</span>
-          <span class="settle-name" style="background:rgba(255,107,107,0.15);color:#FF6B6B">${from?.name||'?'}</span>
-          <span style="color:var(--muted);font-size:18px">→</span>
-          <span class="settle-name" style="background:rgba(200,240,96,0.12);color:var(--accent)">${to?.name||'?'}</span>
-          <span style="font-size:22px">${to?.avatar||'?'}</span>
-        </div>
-        <div class="settle-amt">${fmt(t.amount)}</div>
-        <button class="settle-btn" onclick="settleUp('${t.from}','${t.to}',${t.amount})">✓ 已还清</button>
-      </div>`;
-    });
-  }
-
-  const settled = book.settled || [];
-  if (settled.length > 0) {
-    h += `<div class="section-title" style="margin-top:20px">结算记录</div>
-      <div class="settle-card">`;
-    [...settled].reverse().slice(0, 20).forEach(s => {
-      const from = memberById(s.from);
-      const to   = memberById(s.to);
-      h += `<div class="settled-log">
-        <span>${from?.avatar||'?'}</span>
-        <span style="flex:1">${from?.name||'?'} → ${to?.name||'?'}</span>
-        <span style="font-weight:700;color:var(--accent)">${fmt(s.amount)}</span>
-        <span style="margin-left:8px">${s.date}</span>
-      </div>`;
-    });
-    h += `</div>`;
-  }
-  return h;
-}
-
-// ===== BUILD STATS TAB =====
-function buildStatsTab() {
-  const book = getCurrentBook();
-  const members = getCurrentMembers();
-  const bills = book.bills || [];
-  const total = bills.reduce((s,b)=>s+b.amount,0);
-
-  let h = `<div class="section-title">消费概览</div>`;
-  members.forEach((m, idx) => {
-    const paid = bills.filter(b=>b.payer===m.id).reduce((s,b)=>s+b.amount,0);
-    const owe  = bills.reduce((s,b)=>s+(b.splits[m.id]||0),0);
-    const pct  = total > 0 ? (paid/total*100).toFixed(0) : 0;
-    const color = getMemberColor(idx);
-    h += `<div class="stat-row">
-      <div class="stat-member-header">
-        <span style="font-size:28px">${m.avatar}</span>
-        <div>
-          <div style="font-weight:700;font-size:15px">${m.name}</div>
-          <div style="font-size:12px;color:var(--muted)">累计付款 ${fmt(paid)} · 应分摊 ${fmt(owe)}</div>
-        </div>
-      </div>
-      <div class="stat-bar-row">
-        <div class="stat-bar-label"><span>付款占比</span><span>${pct}%</span></div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      </div>
-    </div>`;
-  });
-
-  h += `<div class="section-title" style="margin-top:8px">分类汇总</div>
-    <div class="stat-row">`;
-  CATS.forEach(c => {
-    const catTotal = bills.filter(b=>b.cat===c.id).reduce((s,b)=>s+b.amount,0);
-    if (!catTotal) return;
-    const pct = total > 0 ? (catTotal/total*100).toFixed(0) : 0;
-    h += `<div class="stat-bar-row">
-      <div class="stat-bar-label"><span>${c.label}</span><span>${fmt(catTotal)}</span></div>
-      <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
-    </div>`;
-  });
-  if (!total) h += `<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0">暂无数据</div>`;
-  h += `</div>`;
-  return h;
-}
-
-// ===== BUILD MODAL =====
-function buildModal() {
-  if (ui.modal === 'manageBooks') return buildBookManagerModal();
-  if (ui.modal === 'manageMembers') return buildMemberManagerModal();
-  if (ui.modal === 'createBook') return buildCreateBookModal();
-  return '';
-}
-
-function buildConfirmDialog() {
-  const d = ui.confirmDialog;
-  if (!d) return '';
-  return `<div class="confirm-overlay" onclick="if(event.target===this){ui.confirmDialog=null;render();}">
-    <div class="confirm-box">
-      <div class="confirm-title">${d.title}</div>
-      <div class="confirm-msg">${d.msg}</div>
-      <div class="confirm-btns">
-        <div class="confirm-btn cancel" onclick="ui.confirmDialog=null;render()">取消</div>
-        <div class="confirm-btn danger" onclick="ui.confirmDialog.onConfirm();ui.confirmDialog=null;">确定</div>
-      </div>
-    </div>
-  </div>`;
-}
-
-function buildBookManagerModal() {
-  const bookIds = Object.keys(books);
-  let h = `<div class="modal-overlay" onclick="if(event.target===this){ui.modal=null;render();}">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title">📖 管理账本</div>`;
-
-  bookIds.forEach(id => {
-    const book = books[id];
-    const isCurrent = id === currentBookId;
-    const billCount = (book.bills || []).length;
-    const memberCount = (book.members || []).length;
-    h += `<div class="book-list-item${isCurrent?' current':''}">
-      <div style="font-size:24px">📖</div>
-      <div class="book-list-info">
-        <div class="book-list-name">${book.name}</div>
-        <div class="book-list-meta">${memberCount} 人 · ${billCount} 笔${isCurrent?' · 当前':''}</div>
-      </div>
-      <div class="book-list-actions">`;
-    if (!isCurrent) {
-      h += `<div class="book-list-btn primary" onclick="switchBook('${id}')">切换</div>`;
-    }
-    h += `<div class="book-list-btn danger" onclick="deleteBook('${id}')">删除</div>`;
-    h += `</div></div>`;
-  });
-
-  h += `<button class="create-book-btn" onclick="ui.newBook={name:'',members:[]};ui.newMember={name:'',avatar:'😀'};ui.modal='createBook';render()">
-    + 新建账本
-  </button>`;
-
-  h += `</div></div>`;
-  return h;
-}
-
-function buildCreateBookModal() {
-  const nb = ui.newBook;
-  const nm = ui.newMember;
-
-  let h = `<div class="modal-overlay" onclick="if(event.target===this){ui.modal='manageBooks';render();}">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title">✨ 新建账本</div>
+    h += `<div class="add-form">
+      <div class="form-title">+ 新增账单</div>
 
       <div class="form-row">
-        <div class="form-label">账本名称</div>
-        <input class="form-input" type="text" placeholder="例如：旅行AA、宿舍分摊…"
-          value="${nb.name}"
-          oninput="ui.newBook.name=this.value">
+        <div class="form-label">金额 <span style="color:var(--accent2);font-size:10px;font-weight:500">· 可叠加多项</span></div>
+        ${buildCalc()}
       </div>
 
       <div class="form-row">
-        <div class="form-label">成员列表 (${nb.members.length} 人)</div>`;
-
-  nb.members.forEach((m, i) => {
-    h += `<div class="member-mgmt-item">
-      <div class="member-mgmt-avatar">${m.avatar}</div>
-      <div class="member-mgmt-info">
-        <div class="member-mgmt-name">${m.name}</div>
+        <div class="form-label">描述</div>
+        <input class="form-input" type="text" placeholder="比如：晚饭、奶茶、打车…"
+          id="descInput"
+          onblur="ui.form.desc=this.value"
+          onkeydown="if(event.key==='Enter'){ui.form.desc=this.value;render()}">
       </div>
-      <div class="member-mgmt-actions">
-        <div class="member-action-btn danger" onclick="removeMemberFromNewBook(${i})">×</div>
-      </div>
-    </div>`;
-  });
 
-  h += `<div class="add-member-form">
-    <div class="add-member-form-title">添加成员</div>
-    <div class="form-label">选择头像</div>
-    <div class="avatar-picker">`;
-  AVATAR_OPTIONS.forEach(a => {
-    h += `<div class="avatar-option${nm.avatar===a?' selected':''}"
-      onclick="ui.newMember.avatar='${a}';render()">${a}</div>`;
-  });
-  h += `</div>
-    <div class="add-member-row">
-      <input class="add-member-input" type="text" placeholder="成员名称"
-        value="${nm.name}"
-        oninput="ui.newMember.name=this.value"
-        onkeydown="if(event.key==='Enter'){addMemberToNewBook();}">
-      <div class="add-member-submit" onclick="addMemberToNewBook()">+ 添加</div>
-    </div>
-  </div>
-  </div>
+      <div class="form-row">
+        <div class="form-label">分类</div>
+        <div class="cat-pills">`;
+    CATS.forEach(c => {
+      h += `<div class="cat-pill${f.cat===c.id?" active":""}" onclick="ui.form.cat='${c.id}';render()">${c.label}</div>`;
+    });
+    h += `</div></div>
 
-  <button class="create-book-btn" onclick="submitNewBook()"
-    ${nb.name.trim() && nb.members.length >= 2 ? '' : 'disabled style="opacity:0.5;cursor:not-allowed"'}>
-    创建账本
-  </button>
-  <div style="text-align:center;margin-top:10px">
-    <div class="book-list-btn" onclick="ui.modal='manageBooks';render()" style="display:inline-block">返回</div>
-  </div>`;
-
-  h += `</div></div>`;
-  return h;
-}
-
-function buildMemberManagerModal() {
-  const members = getCurrentMembers();
-  const book = getCurrentBook();
-  const nm = ui.newMember;
-
-  let h = `<div class="modal-overlay" onclick="if(event.target===this){ui.modal=null;render();}">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title">👥 管理成员 · ${book.name}</div>`;
-
-  members.forEach((m, idx) => {
-    const isEditing = ui.editingMemberId === m.id;
-    const color = getMemberColor(idx);
-    h += `<div class="member-mgmt-item">
-      <div class="member-mgmt-avatar">${m.avatar}</div>
-      <div class="member-mgmt-info">`;
-    if (isEditing) {
-      h += `<div style="display:flex;gap:6px;align-items:center">
-        <input class="inline-edit-input" id="memberEditInput" type="text" value="${ui.editingMemberName}"
-          oninput="ui.editingMemberName=this.value"
-          onkeydown="if(event.key==='Enter'){saveMemberEdit('${m.id}');}if(event.key==='Escape'){ui.editingMemberId=null;render();}">
-        <div class="member-action-btn" onclick="saveMemberEdit('${m.id}')" style="color:var(--accent);border-color:var(--accent)">✓</div>
+      <div class="form-row">
+        <div class="form-label">谁付了钱</div>
+        <div class="payer-grid">`;
+    members.forEach(m => {
+      h += `<div class="payer-btn${f.payer===m.id?" active":""}" onclick="ui.form.payer='${m.id}';render()">
+        <div class="payer-btn-avatar">${esc(m.avatar)}</div>
+        <div class="payer-btn-name">${esc(m.name)}</div>
       </div>`;
-    } else {
-      h += `<div class="member-mgmt-name">${m.name}</div>`;
+    });
+    h += `</div></div>
+
+      <div class="form-row">
+        <div class="form-label">分摊方式</div>
+        <div class="split-toggle">
+          <div class="split-btn${f.splitMode==="equal"?" active":""}" onclick="ui.form.splitMode='equal';render()">⚖️ 平均分</div>
+          <div class="split-btn${f.splitMode==="custom"?" active":""}" onclick="ui.form.splitMode='custom';render()">✏️ 自定义</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">参与人 & 分摊</div>`;
+
+    members.forEach(m => {
+      const checked = f.participants[m.id];
+      const share = splits[m.id] || 0;
+      h += `<div class="participant-row">
+        <div class="participant-left">
+          <div class="participant-check${checked?" checked":""}" onclick="ui.form.participants['${m.id}']=!ui.form.participants['${m.id}'];render()">
+            ${checked?"✓":""}
+          </div>
+          <span style="font-size:18px">${esc(m.avatar)}</span>
+          <span>${esc(m.name)}</span>
+        </div>`;
+      if (f.splitMode === "custom" && checked) {
+        h += `<input class="participant-custom-amt" type="number" inputmode="decimal"
+          placeholder="0.00" value="${esc(f.customAmts[m.id])}"
+          oninput="ui.form.customAmts['${m.id}']=this.value;render()">`;
+      } else if (f.splitMode === "equal" && checked) {
+        h += `<div class="participant-share">${fmt(share)}</div>`;
+      } else {
+        h += `<div style="color:var(--muted);font-size:12px">不参与</div>`;
+      }
+      h += `</div>`;
+    });
+
+    if (f.splitMode === "custom" && amt > 0) {
+      const diff = Math.abs(splitTotal - amt);
+      const color = diff < 0.01 ? "var(--accent)" : "#FF6B6B";
+      h += `<div style="text-align:right;font-size:12px;color:${color};margin-top:8px;font-family:var(--font);font-weight:700">
+        已分：${fmt(splitTotal)} / ${fmt(amt)} ${diff<0.01?"✓":`(差 ${fmt(diff)})`}
+      </div>`;
     }
     h += `</div>
-      <div class="member-mgmt-actions">`;
-    if (!isEditing) {
-      h += `<div class="member-action-btn" onclick="ui.editingMemberId='${m.id}';ui.editingMemberName='${m.name}';render()">✏️</div>`;
-      h += `<div class="member-action-btn danger" onclick="deleteMember('${m.id}')">×</div>`;
-    }
-    h += `</div></div>`;
 
-    // Avatar picker for editing member
-    if (isEditing) {
-      h += `<div style="padding:8px 0 4px 38px">
-        <div class="form-label">更换头像</div>
-        <div class="avatar-picker">`;
-      AVATAR_OPTIONS.forEach(a => {
-        h += `<div class="avatar-option${m.avatar===a?' selected':''}"
-          onclick="changeMemberAvatar('${m.id}','${a}')">${a}</div>`;
+      <button class="submit-btn" onclick="syncInputsAndAdd()">
+        记一笔
+      </button>
+    </div>`;
+  }
+
+  // ══ TAB: BILLS ══
+  if (ui.tab === "bills") {
+    const bills = [...book.bills].sort((a,b) => b.ts - a.ts);
+    if (!bills.length) {
+      h += `<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">还没有账单，去记第一笔吧~</div></div>`;
+    } else {
+      h += `<div class="section-title">共 ${bills.length} 笔 · 合计 ${fmt(bills.reduce((s,b)=>s+b.amount,0))}</div>`;
+      bills.forEach(b => {
+        const cat = CAT_MAP[b.cat] || CAT_MAP.other;
+        const payer = memberById(b.payer);
+        const splitDesc = Object.entries(b.splits).map(([id,amt]) => `${esc(memberById(id)?.avatar)}${fmt(amt)}`).join(" ");
+        h += `<div class="bill-item">
+          <div class="bill-cat-icon" style="background:${cat.bg}">${cat.label.split(" ")[0]}</div>
+          <div class="bill-info">
+            <div class="bill-desc">${esc(b.desc)}</div>
+            <div class="bill-meta">${esc(b.date)} · ${splitDesc}</div>
+          </div>
+          <div class="bill-right">
+            <div class="bill-amt">${fmt(b.amount)}</div>
+            <div class="bill-payer">${esc(payer?.avatar)} 付款</div>
+          </div>
+          <button class="bill-delete" onclick="deleteBill('${b.id}')">×</button>
+        </div>`;
       });
-      h += `</div></div>`;
     }
-  });
+  }
 
-  // Add new member
-  h += `<div class="add-member-form">
-    <div class="add-member-form-title">添加新成员</div>
-    <div class="form-label">选择头像</div>
-    <div class="avatar-picker">`;
-  AVATAR_OPTIONS.forEach(a => {
-    h += `<div class="avatar-option${nm.avatar===a?' selected':''}"
-      onclick="ui.newMember.avatar='${a}';render()">${a}</div>`;
-  });
-  h += `</div>
-    <div class="add-member-row">
-      <input class="add-member-input" type="text" placeholder="成员名称"
-        value="${nm.name}"
-        oninput="ui.newMember.name=this.value"
-        onkeydown="if(event.key==='Enter'){addMemberToBook(ui.newMember.name||this.value, ui.newMember.avatar);}">
-      <div class="add-member-submit" onclick="addMemberToBook(ui.newMember.name, ui.newMember.avatar)">+ 添加</div>
-    </div>
-  </div>`;
+  // ══ TAB: SETTLE ══
+  if (ui.tab === "settle") {
+    const bal = computeBalances();
+    const txns = computeSettlements({ ...bal });
+    const allClear = txns.length === 0;
 
-  h += `</div></div>`;
+    if (allClear) {
+      h += `<div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">大家都结清了！太棒了~</div></div>`;
+    } else {
+      h += `<div class="section-title">最优结算方案</div>`;
+      txns.forEach(t => {
+        const from = memberById(t.from);
+        const to   = memberById(t.to);
+        h += `<div class="settle-card">
+          <div class="settle-arrow">
+            <span style="font-size:22px">${esc(from.avatar)}</span>
+            <span class="settle-name" style="background:rgba(255,107,107,0.15);color:var(--dan)">${esc(from.name)}</span>
+            <span style="color:var(--muted);font-size:18px">→</span>
+            <span class="settle-name" style="background:rgba(200,240,96,0.12);color:var(--accent)">${esc(to.name)}</span>
+            <span style="font-size:22px">${esc(to.avatar)}</span>
+          </div>
+          <div class="settle-amt">${fmt(t.amount)}</div>
+          <button class="settle-btn" onclick="settleUp('${t.from}','${t.to}',${t.amount})">
+            ✓ 已还清
+          </button>
+        </div>`;
+      });
+    }
+
+    if (book.settled.length > 0) {
+      h += `<div class="section-title" style="margin-top:20px">结算记录</div>
+        <div class="settle-card">`;
+      [...book.settled].reverse().slice(0, 20).forEach(s => {
+        const from = memberById(s.from);
+        const to   = memberById(s.to);
+        h += `<div class="settled-log">
+          <span>${esc(from?.avatar)}</span>
+          <span style="flex:1">${esc(from?.name)} → ${esc(to?.name)}</span>
+          <span style="font-family:var(--font);font-weight:700;color:var(--accent)">${fmt(s.amount)}</span>
+          <span style="margin-left:8px">${esc(s.date)}</span>
+        </div>`;
+      });
+      h += `</div>`;
+    }
+  }
+
+  // ══ TAB: STATS ══
+  if (ui.tab === "stats") {
+    const total = book.bills.reduce((s,b)=>s+b.amount,0);
+    h += `<div class="section-title">消费概览</div>`;
+
+    // Per-person total spent
+    members.forEach(m => {
+      const paid = book.bills.filter(b=>b.payer===m.id).reduce((s,b)=>s+b.amount,0);
+      const owe  = book.bills.reduce((s,b)=>s+(b.splits[m.id]||0),0);
+      const pct  = total > 0 ? (paid/total*100).toFixed(0) : 0;
+      h += `<div class="stat-row">
+        <div class="stat-member-header">
+          <span style="font-size:28px">${esc(m.avatar)}</span>
+          <div>
+            <div style="font-weight:700;font-size:15px">${esc(m.name)}</div>
+            <div style="font-size:12px;color:var(--muted)">累计付款 ${fmt(paid)} · 应分摊 ${fmt(owe)}</div>
+          </div>
+        </div>
+        <div class="stat-bar-row">
+          <div class="stat-bar-label"><span>付款占比</span><span>${pct}%</span></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:${m.color}"></div></div>
+        </div>
+      </div>`;
+    });
+
+    // By category
+    h += `<div class="section-title" style="margin-top:8px">分类汇总</div>
+      <div class="stat-row">`;
+    CATS.forEach(c => {
+      const catTotal = book.bills.filter(b=>b.cat===c.id).reduce((s,b)=>s+b.amount,0);
+      if (!catTotal) return;
+      const pct = total > 0 ? (catTotal/total*100).toFixed(0) : 0;
+      h += `<div class="stat-bar-row">
+        <div class="stat-bar-label"><span>${c.label}</span><span>${fmt(catTotal)}</span></div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+      </div>`;
+    });
+    if (!total) h += `<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0">暂无数据</div>`;
+    h += `</div>`;
+  }
+
+  // ══ TAB: BOOKS ══
+  if (ui.tab === "books") {
+    h += `<div class="add-form">
+      <div class="form-title">📒 当前账本</div>
+      <button class="mini-btn primary" style="width:100%;margin-bottom:14px" onclick="ui.bookDrawerOpen=true;render()">切换 / 新建账本</button>
+      <div class="form-row">
+        <div class="form-label">当前账本名</div>
+        <div class="compact-input-row">
+          <input class="form-input" id="renameBookInput" type="text" value="${esc(book.name)}">
+          <button class="mini-btn" onclick="renameCurrentBook()">保存</button>
+        </div>
+      </div>
+      <button class="mini-btn danger" style="width:100%" onclick="deleteCurrentBook()">删除当前账本</button>
+      <button class="mini-btn" style="width:100%;margin-top:8px" onclick="restoreLegacyBook()">恢复旧版账本</button>
+      <div class="form-row" style="margin-top:14px;margin-bottom:0">
+        <div class="form-label">粘贴旧版数据</div>
+        <textarea class="import-textarea" id="importLegacyJson" placeholder='在旧版页面控制台运行：copy(localStorage.getItem("squad_aa"))，再粘贴到这里'></textarea>
+        <button class="mini-btn primary" style="width:100%;margin-top:8px" onclick="importLegacyJson()">导入粘贴数据</button>
+      </div>
+    </div>`;
+
+    h += `<div class="add-form">
+      <div class="form-title">成员管理</div>`;
+    members.forEach(m => {
+      const locked = memberInUse(m.id);
+      const avatarDraft = ui.memberDrafts[`${m.id}:avatar`] ?? m.avatar;
+      const nameDraft = ui.memberDrafts[`${m.id}:name`] ?? m.name;
+      h += `<div class="member-editor-row">
+        <input class="form-input avatar-input" value="${esc(avatarDraft)}" maxlength="4"
+          oninput="ui.memberDrafts['${m.id}:avatar']=this.value"
+          onkeydown="if(event.key==='Enter')this.blur()"
+          onchange="updateMember('${m.id}','avatar',this.value)"
+          onblur="updateMember('${m.id}','avatar',this.value)">
+        <input class="form-input" value="${esc(nameDraft)}"
+          oninput="ui.memberDrafts['${m.id}:name']=this.value"
+          onkeydown="if(event.key==='Enter')this.blur()"
+          onchange="updateMember('${m.id}','name',this.value)"
+          onblur="updateMember('${m.id}','name',this.value)">
+        <button class="mini-btn danger" onclick="deleteMember('${m.id}')" ${locked ? "disabled" : ""}>删除</button>
+      </div>`;
+    });
+
+    h += `<div class="form-row" style="margin-top:16px">
+        <div class="form-label">添加成员</div>
+        <div class="member-editor-row" style="border-bottom:none;padding-bottom:0">
+          <input class="form-input avatar-input" id="newMemberAvatar" maxlength="4" placeholder="😀">
+          <input class="form-input" id="newMemberName" placeholder="成员名">
+          <button class="mini-btn primary" onclick="addMemberFromInput()">添加</button>
+        </div>
+        <div class="avatar-picks">`;
+    AVATAR_PRESETS.forEach(a => {
+      h += `<div class="avatar-pick" onclick="ui.bookForm.memberAvatar='${a}';render()">${a}</div>`;
+    });
+    h += `</div>
+      </div>
+    </div>`;
+  }
+
+  h += `</div>`;
   return h;
 }
 
@@ -1783,26 +1811,40 @@ function buildMemberManagerModal() {
 render();
 async function init() {
   const doInit = async () => {
-    await loadFromFirebase();
-    await migrateOldData();
-    resetFormForCurrentBook();
-    startRealtimeSync();
+    const loaded = await loadFromFirebase();
+    const needsSave = !!loaded?._needsSave;
+    state = normalizeState(loaded);
+    ensureFormForBook();
     ui.syncStatus = "idle";
     render();
+    if (needsSave) saveState(state);
+    startRealtimeSync();
   };
-  if (window._fb?.ready) {
+  if (window._fb?.disabled) {
+    const savedBooks = JSON.parse(localStorage.getItem("squad_aa_books") || "null");
+    const legacyLocal = JSON.parse(localStorage.getItem("squad_aa") || "null");
+    state = savedBooks ? mergeLegacyIntoState(savedBooks, legacyLocal) : normalizeState(legacyLocal);
+    const savedActive = localStorage.getItem("squad_aa_active_book");
+    if (savedActive && state.books[savedActive]) state.activeBookId = savedActive;
+    ensureFormForBook();
+    ui.syncStatus = "idle";
+    render();
+    if (state._needsSave) saveState(state);
+  } else if (window._fb?.ready) {
     await doInit();
   } else {
+    // Timeout: if Firebase SDK doesn't load in 6s, fall back to localStorage
     const timer = setTimeout(async () => {
       console.warn("Firebase SDK load timeout, using localStorage");
-      try {
-        const stored = JSON.parse(localStorage.getItem(LS_KEY) || "null");
-        if (stored && stored.books) { books = stored.books; currentBookId = stored.currentBookId; }
-      } catch {}
-      await migrateOldData();
-      resetFormForCurrentBook();
+      const savedBooks = JSON.parse(localStorage.getItem("squad_aa_books") || "null");
+      const legacyLocal = JSON.parse(localStorage.getItem("squad_aa") || "null");
+      state = savedBooks ? mergeLegacyIntoState(savedBooks, legacyLocal) : normalizeState(legacyLocal);
+      const savedActive = localStorage.getItem("squad_aa_active_book");
+      if (savedActive && state.books[savedActive]) state.activeBookId = savedActive;
+      ensureFormForBook();
       ui.syncStatus = "idle";
       render();
+      if (state._needsSave) saveState(state);
     }, 6000);
     document.addEventListener("firebase-ready", async () => {
       clearTimeout(timer);
